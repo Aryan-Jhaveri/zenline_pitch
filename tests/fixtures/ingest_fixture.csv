@@ -1,0 +1,21 @@
+id,gender,masterCategory,subCategory,articleType,baseColour,season,year,usage,productDisplayName
+1,Men,Apparel,Topwear,Shirts,Navy,Summer,2019,Casual,Peter England Men Party Blue Jeans
+2,Women,Accessories,Watches,Watches,Silver,Winter,2019,Casual,Titan Women Silver Watch
+3,Men,Apparel,Topwear,Tshirts,Blue,Summer,2019,Sports,Nike Men Blue T-shirt
+4,Men,Apparel,Topwear,Tshirts,Blue,Summer,2019,Casual,
+5,Men,Apparel,Topwear,,Red,Summer,2019,Casual,Puma Men Red Sneakers
+6,Unisex,Apparel,Bottomwear,Track Pants,Black,Summer,2019,Sports,Reebok Black Track Pant
+7,Men,Apparel,Bottomwear,Jeans,Navy,Summer,2019,Casual,Levi's Men Navy Jeans
+8,Women,Apparel,Topwear,Tops,White,Summer,2019,Casual,Roadster Women White Top
+9,Men,Apparel,Topwear,Tshirts,Blue,Summer,2019,Sports,Nike Mean Team India Cricket Jersey
+10,Men,Apparel,Topwear,Tshirts,Red,Summer,2019,Casual,Ferrari Tee
+10,Men,Apparel,Topwear,Tshirts,Red,Summer,2019,Casual,Ferrari Tee Black
+12,Men,Footwear,Shoes,Casual Shoes,Black,Summer,2019,Casual,Adidas Men Casual Shoes
+13,Women,Footwear,Shoes,Sandals,Brown,Summer,2019,Casual,Bata Women Brown Sandals
+14,Men,Footwear,Shoes,Sports Shoes,White,Summer,2019,Sports,Lotto Men's Court Logo White Sneakers
+15,Women,Apparel,Topwear,Kurtas,Green,Summer,2019,Ethnic,FabIndia Women Green Kurta
+16,Men,Apparel,Topwear,Tshirts,Black,Summer,2019,Casual,Black T-shirt
+17,Men,Apparel,Topwear,Shirts,Blue,Summer,2019,Casual,Tom Tailor Men Denim Shirt, Blue
+18,Men,Apparel,Topwear,Sweaters,Red,Summer,2019,Casual,United Colors of Benetton Men Red Sweater
+19,Men,Apparel,Bottomwear,Jeans,Blue,Summer,2019,Casual,Wrangler Men Blue Jeans
+20,Men,Apparel,Topwear,Jackets,Black,Summer,2019,Casual,SomeBrand S.A. Men Black Jacket
