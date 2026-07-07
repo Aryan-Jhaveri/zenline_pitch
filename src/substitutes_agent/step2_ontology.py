@@ -33,6 +33,10 @@ _FORMAT_TOKENS: list[tuple[str, str]] = [
     ("cream", "cream"),
     ("creme", "cream"),
     ("crème", "cream"),
+    # Moisturizers are creams; ordered before "oil" so "oil-free moisturizer"
+    # classifies as cream rather than matching the "oil" token.
+    ("moisturizer", "cream"),
+    ("moisturiser", "cream"),
     ("lotion", "lotion"),
     ("serum", "serum"),
     ("gel", "gel"),
