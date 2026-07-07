@@ -287,16 +287,16 @@
 <!-- 8. Where this fits -->
 <section>
 <h2>Where this fits</h2>
-<p>Four papers directly relevant to what this pipeline does or chooses not to do.</p>
+<p>Four papers that shaped what I built or chose not to.</p>
 
 <div class="paper">
   <p><strong>Ma et al. (Aalborg, Amsterdam, TU Berlin), CE-RAG4EM.</strong>
     <a href="https://arxiv.org/abs/2602.05708">arXiv:2602.05708</a>. Feb 2026.</p>
   <p>
-    Classical blocking plus modern LLMs is the economically viable
-    pattern at scale. Step 3 does the same blocking-based grouping,
-    minus the external knowledge-graph lookup. Their approach beats
-    supervised PLMs on 6 of 9 standard entity-matching benchmarks.
+    Blocking plus LLMs is the economically viable pattern at scale. My
+    Step 3 does the same, minus the external knowledge-graph lookup.
+    They beat supervised PLMs on 6 of 9 standard entity-matching
+    benchmarks.
   </p>
 </div>
 
@@ -305,11 +305,11 @@
     LLM4ECommerce Workshop at KDD'25. Aug 2025. Deployed across Amazon
     US, DE, FR stores.</p>
   <p>
-    Multi-stage BM25 retrieval and brand-aware reranking to feed LLM
-    prompts with in-catalog few-shot examples. Step 2's LLM path is a
-    scrappier version of the same intuition. They explicitly chose BM25
-    over vector embeddings for operational simplicity, which is the
-    same reason this pipeline uses rules instead of embeddings.
+    BM25 retrieval and brand-aware reranking feed LLM prompts with
+    in-catalog few-shot examples. My Step 2 LLM path is a scrappier
+    version of the same intuition. They chose BM25 over vector
+    embeddings for operational simplicity, the same reason I use rules
+    instead of embeddings.
   </p>
 </div>
 
@@ -318,11 +318,9 @@
     <a href="https://arxiv.org/abs/2510.14321">arXiv:2510.14321</a>. Oct
     2025. Deployed at Taobao since Aug 2025.</p>
   <p>
-    LLM reasoning is baked into the embedding layer to bridge the
-    semantic gap on difficult natural-language queries. This pipeline
-    does not take that direction. Our retrieval is deterministic
-    blocking on structured attributes, not semantic search over
-    free-form queries.
+    LLM reasoning baked into the embedding layer to bridge the semantic
+    gap on hard queries. I did not take that direction: my retrieval is
+    deterministic blocking on structured attributes, not semantic search.
   </p>
 </div>
 
@@ -330,11 +328,10 @@
   <p><strong>Kothari et al. (Flipkart), semantic retrieval for product search.</strong>
     <a href="https://arxiv.org/abs/2606.01504">arXiv:2606.01504</a>. May 2026.</p>
   <p>
-    Production Siamese dual-encoder with graded-relevance preference
-    optimization. Perfect Match, Substitute, Complementary, Irrelevant.
-    Maps onto this pipeline's VARIANT, SUBSTITUTE, UNRELATED with a
-    fourth class this pipeline does not handle. What you build when
-    you have labeled substitute data. This demo does not.
+    Production Siamese dual-encoder with four classes: Perfect Match,
+    Substitute, Complementary, Irrelevant. Maps onto my VARIANT,
+    SUBSTITUTE, UNRELATED, minus the Complementary class. What you build
+    when you have labeled substitute data. I don't.
   </p>
 </div>
 </section>
