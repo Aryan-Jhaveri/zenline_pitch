@@ -265,8 +265,43 @@
 
 <h3>Interpretation</h3>
 <p>Not sure what to make of the within-model consistency. Gemini agrees with itself on every pair, Claude on 29 of 30, but the interesting number is cross-model agreement at 80%. For a retailer that reframes the failure mode: it's not "ask the same LLM twice, get two answers" (less of a problem at the small tier than the rhetoric suggests), it's "swap vendors and watch the substitute map shift" on some fraction of borderline SKUs.</p>
-<p>How big that fraction is depends on how you deploy. One query per pair with no retry and 20% of borderline pairs have at least one disagreeing verdict across the 9 runs. Majority vote across three runs per model, which is what any rational production system would do, and only 1 pair in 30 (3.3%) actually flips. That pair is 8200 (Locomotive Men Solid Lander Black T-Shirts) vs 8393 (ADIDAS Men White T-shirt): GPT-4o-mini says yes on all three runs, Gemini and Claude both say no on all three. Every other cross-model disagreement is within-model noise on a single model, most often GPT-4o-mini.</p>
+<p>How big that fraction is depends on how you deploy. One query per pair with no retry and 20% of borderline pairs have at least one disagreeing verdict across the 9 runs. Majority vote across three runs per model, which is what any rational production system would do, and only 1 pair in 30 (3.3%) actually flips. Every other cross-model disagreement is within-model noise on a single model, most often GPT-4o-mini. That one pair is the worked example below.</p>
 <p>20% is the ceiling under naive deployment, 3.3% the floor under sensible retry. Either way the rules pipeline handles the deterministic majority before an LLM sees it, so drift only ever applies to the borderline residual. A vendor change becomes a versioned diff on a small auditable subset, not a silent shift across the whole map.</p>
+
+<h3>The one pair that flipped</h3>
+<p>
+  Under majority voting, one of the 30 borderline pairs flips between
+  vendors. Rules scored it borderline. Then the models split.
+</p>
+<table>
+  <thead>
+    <tr><th></th><th>SKU 8200</th><th>SKU 8393</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Product</td><td>Locomotive Men Solid Lander Black T-Shirts</td><td>ADIDAS Men White T-shirt</td></tr>
+    <tr><td>Article type</td><td>t-shirt</td><td>t-shirt</td></tr>
+    <tr><td>Colour family</td><td>black</td><td>white</td></tr>
+    <tr><td>Usage</td><td>Casual</td><td>Sports</td></tr>
+  </tbody>
+</table>
+<p class="artifact">Rules score: 0.475.</p>
+<table>
+  <thead>
+    <tr><th>Model</th><th>Run 1</th><th>Run 2</th><th>Run 3</th><th>Majority</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>gemini-2.5-flash</td><td class="num">no</td><td class="num">no</td><td class="num">no</td><td class="num">no</td></tr>
+    <tr><td>anthropic/claude-haiku-4.5</td><td class="num">no</td><td class="num">no</td><td class="num">no</td><td class="num">no</td></tr>
+    <tr><td>openai/gpt-4o-mini</td><td class="num">yes</td><td class="num">yes</td><td class="num">yes</td><td class="num">yes</td></tr>
+  </tbody>
+</table>
+<p>
+  This is the vendor-swap risk claim in one worked example. Two
+  vendors call the pair non-substitutable with 100% self-consistency.
+  One calls it substitutable with 100% self-consistency. A retailer
+  changing model providers would see this SKU relationship flip. On
+  30 pairs it happened once. On 30,000 pairs the count would scale.
+</p>
 <p class="artifact">
   Per-pair audit trail:
   <a href="https://github.com/Aryan-Jhaveri/zenline_pitch/blob/main/output/step6_audit_trail.md">output/step6_audit_trail.md</a>.
