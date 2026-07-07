@@ -23,3 +23,5 @@ For a retailer, it couldn't be "ask the same LLM twice, get two answers" (less o
 
 
 The rules pipeline keeps LLMs off the deterministic majority of decisions, so a vendor change becomes a versioned diff instead of silent drift. GPT-4o-mini's 86.67% self-agreement is a secondary datum: even without vendor-swapping, picking the wrong small model gives flapping decisions on roughly one in seven borderline calls.
+
+Looking at run-level detail, only one of the six cross-model disagreements is a clean vendor split (pair 8200|8393, where GPT-4o-mini says yes on all three runs while both Gemini and Claude say no on all three). The other five are within-model noise on a single model, most often GPT-4o-mini. Under majority voting across three runs per model, the real vendor-swap flip rate on this sample is 1 pair in 30, roughly 3.3 percent. That's the number a retailer's ops team would actually experience if they deployed any of these models with the sensible retry pattern. Small, but nonzero, and it accumulates across catalog versions. See output/step6_audit_trail.md for the full per-pair audit and output/step6_vendor_diff.md for the vendor comparison.
