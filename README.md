@@ -12,7 +12,7 @@ wardrobe app.
 
 ## Why an agentic workflow (not an autonomous agent)
 
-Arber Sejdiji (Zenline's CEO) has argued publicly that fully autonomous
+Zenline has argued publicly that fully autonomous
 agents are inconsistent for high-stakes retail decisions; the value is in
 **agentic workflows** — a fixed, visible, verifiable pipeline where an LLM
 does judgment work only at one or two clearly defined points and every
@@ -22,7 +22,7 @@ ever fires in Step 2 (filling ambiguous attributes) and Step 3
 (tie-breaking borderline pairs) — and only when an API key is set. Same
 input always produces the same output.
 
-I read Arber's public writing as arguing for a **product ontology** — a
+I read Zenline's public positioning as arguing for a **product ontology** — a
 stable, retailer-specific vocabulary of attributes that AI reasoning is
 anchored to. I don't know Zenline's internal term for this; it's my read.
 Step 2's structured attribute layer (article type, colour family, usage,
@@ -107,8 +107,8 @@ published metric.
 
 ## Testing the consistency claim
 
-Step 5 (`uv run substitutes-agent consistency`) tests the newsletter
-thesis that raw autonomous agents give inconsistent answers to the same
+Step 5 (`uv run substitutes-agent consistency`) tests Zenline's stated thesis
+that raw autonomous agents give inconsistent answers to the same
 question: it takes up to 30 borderline pairs (total_score in [0.40, 0.60]),
 runs each available model 3 times, and reports per-model self-agreement
 and cross-model agreement rates. The rules baseline is 100% by

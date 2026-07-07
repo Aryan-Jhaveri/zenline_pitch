@@ -1,7 +1,7 @@
 """Step 5 — consistency experiment on borderline pairs (optional).
 
-Framing (kept in the report itself, not a comment): Arber's Q2 2026
-newsletter argues that raw autonomous agents give inconsistent answers to
+Framing (kept in the report itself, not a comment): Zenline's Q2 2026
+update argues that raw autonomous agents give inconsistent answers to
 the same question. This step tests that claim on this project's own
 ambiguous pairs — same prompt, same pair, repeated runs, multiple models.
 
@@ -218,7 +218,7 @@ def run_consistency(
     report = {
         "skipped": False,
         "framing": (
-            "Arber's Q2 2026 newsletter argues that raw autonomous agents "
+            "Zenline's Q2 2026 update argues that raw autonomous agents "
             "give inconsistent answers to the same question. This step "
             "tests that claim on this project's own ambiguous pairs."
         ),
