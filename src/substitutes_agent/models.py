@@ -1,4 +1,4 @@
-"""Pydantic dataclasses for pipeline artifacts."""
+"""Pydantic dataclasses for pipeline artifacts (apparel schema)."""
 
 from __future__ import annotations
 
@@ -6,22 +6,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-Format = Literal["cream", "gel", "serum", "lotion", "balm", "oil", "mask", "unknown"]
-TargetArea = Literal["face", "eye", "lip", "body", "unknown"]
-SkinType = Literal["dry", "oily", "combination", "sensitive", "mature", "normal"]
-Active = Literal[
-    "retinol",
-    "retinal",
-    "niacinamide",
-    "hyaluronic acid",
-    "vitamin c",
-    "salicylic acid",
-    "glycolic acid",
-    "lactic acid",
-    "ceramides",
-    "peptides",
-    "spf",
-]
+Source = Literal["rules", "llm"]
 
 
 class OntologyRecord(BaseModel):
@@ -30,19 +15,27 @@ class OntologyRecord(BaseModel):
     code: str
     brand_normalized: str
     product_name: str
-    format: Format
-    skin_type_claims: list[str] = Field(default_factory=list)
-    key_actives: list[str] = Field(default_factory=list)
-    pack_size_ml: float | None = None
-    target_area: TargetArea = "unknown"
-    source: Literal["rules", "llm"] = "rules"
+    article_type: str
+    master_category: str
+    base_colour: str
+    usage: str
+    gender: str
+    season: str | None = None
+    pattern: str | None = None
+    material: str | None = None
+    source: Source = "rules"
     confidence: float = 1.0
 
 
 class ScoreComponents(BaseModel):
-    active_overlap: float
-    skin_type_overlap: float
-    size_similarity: float
+    """Transparent scoring components for one classified pair."""
+
+    article_type_match: float
+    colour_similarity: float
+    usage_match: float
+    pattern_match: float
+    material_similarity: float
+    season_overlap: float
     total_score: float
 
 
@@ -56,6 +49,14 @@ class Relationship(BaseModel):
     components: ScoreComponents
     decided_by: Literal["rules", "llm"] = "rules"
     reason: str | None = None
+
+
+class PairVerdict(BaseModel):
+    """An LLM's verdict on whether two SKUs are realistic substitutes."""
+
+    verdict: Literal["yes", "no"]
+    reason: str
+    model: str
 
 
 class RunLogEntry(BaseModel):

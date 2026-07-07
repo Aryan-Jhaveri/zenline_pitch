@@ -207,36 +207,6 @@ _ARTICLE_NOUNS: frozenset[str] = frozenset(
 )
 
 
-def extract_text(value: object) -> str:
-    """Extract an English-preferred text from a struct-list cell.
-
-    Retained from the skincare version because the (still-present) skincare
-    Step 2 imports it. Removed once Step 2 is rewritten for apparel.
-    """
-    if value is None:
-        return ""
-    if isinstance(value, list):
-        if not value:
-            return ""
-        first_text = ""
-        for item in value:
-            if isinstance(item, dict):
-                lang = str(item.get("lang") or "").lower()
-                text = str(item.get("text") or "").strip()
-                if not text:
-                    continue
-                if not first_text:
-                    first_text = text
-                if lang == "en":
-                    return text
-            elif isinstance(item, str) and item.strip() and not first_text:
-                first_text = item.strip()
-        return first_text
-    if isinstance(value, str):
-        return value.strip()
-    return ""
-
-
 _BRAND_SUFFIX_RE = re.compile(
     r"\s*[,\s]?\s*"
     r"(?:ltd\.?|limited|inc\.?|llc|co\.|corp\.?|corporation|s\.?a\.?|"

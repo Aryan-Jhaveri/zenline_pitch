@@ -1,12 +1,19 @@
 """Step 2 — build the product ontology (rules; LLM optional).
 
-For each SKU from Step 1, extract structured attributes:
-  format, skin_type_claims, key_actives, pack_size_ml, target_area.
+For each SKU from Step 1, extract structured attributes into a typed
+record: article_type (aligned to my Vastra taxonomy), master_category,
+base_colour (normalized to a colour family), usage, gender, season,
+plus pattern and material regex-extracted from productDisplayName.
 
 Rules are deliberately simple and auditable. The optional LLM path
-(env-gated, implemented in ``llm.py``) only fills ``format`` /
-``key_actives`` for rows the rules leave ambiguous, and is cached to
-``output/.llm_cache/{code}.json`` so re-runs are deterministic.
+(env-gated by ANTHROPIC_API_KEY or GOOGLE_API_KEY) only runs for rows
+where pattern AND material are both null despite a long product name,
+and the prompt includes the set of already-observed values in the run
+so the model aligns to a stable vocabulary rather than free-form output
+— the same pattern my Vastra categorizer uses. Cached to
+output/.llm_cache/{id}.json so re-runs are deterministic.
+
+No key set -> pure rules, no warnings. That is the point.
 """
 
 from __future__ import annotations
@@ -16,208 +23,239 @@ import re
 import time
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import cast
 
 import polars as pl
 
-from substitutes_agent.models import Format, OntologyRecord, RunLogEntry, TargetArea
-from substitutes_agent.step1_ingest import extract_text
+from substitutes_agent.models import OntologyRecord, RunLogEntry, Source
+from substitutes_agent.vastra_taxonomy import align_article_type
 
 # ---------------------------------------------------------------------------
-# Curated vocabularies (closed lists — do not get fancy).
+# Colour family map (documented inline, per spec).
+#
+# Exact-same colour -> similarity 1.0; same family -> 0.6; different
+# family -> 0.0. Built by hand from the 47 baseColour values present in
+# the paramaggarwal dataset. "Multi" is its own family. Anything not
+# listed falls through to "other" (similarity 0.0 vs anything specific).
 # ---------------------------------------------------------------------------
 
-# format: token -> canonical label. Searched in priority order so that
-# "oil-free cream" classifies as cream, not oil.
-_FORMAT_TOKENS: list[tuple[str, str]] = [
-    ("cream", "cream"),
-    ("creme", "cream"),
-    ("crème", "cream"),
-    # Moisturizers are creams; ordered before "oil" so "oil-free moisturizer"
-    # classifies as cream rather than matching the "oil" token.
-    ("moisturizer", "cream"),
-    ("moisturiser", "cream"),
-    ("lotion", "lotion"),
-    ("serum", "serum"),
-    ("gel", "gel"),
-    ("balm", "balm"),
-    ("mask", "mask"),
-    ("sheet", "mask"),
-    ("oil", "oil"),
-]
-
-_SKIN_TYPE_TOKENS: list[tuple[str, str]] = [
-    ("dry", "dry"),
-    ("drying", "dry"),
-    ("oily", "oily"),
-    ("oil-control", "oily"),
-    ("combination", "combination"),
-    ("combo", "combination"),
-    ("sensitive", "sensitive"),
-    ("mature", "mature"),
-    ("normal", "normal"),
-]
-
-# key_actives: (regex pattern, canonical label). Matched case-insensitively
-# against the lowercased ingredients text AND the normalized ingredients_tags.
-# Order is the canonical output order.
-_ACTIVE_RULES: list[tuple[str, str]] = [
-    (r"\bretinol\b", "retinol"),
-    (r"\bretinal\b|retinaldehyde", "retinal"),
-    (r"\bniacinamide\b", "niacinamide"),
-    (r"hyaluronic acid|sodium hyaluronate", "hyaluronic acid"),
-    (r"ascorbic acid|vitamin c|l-ascorbic", "vitamin c"),
-    (r"salicylic acid|bha\b", "salicylic acid"),
-    (r"glycolic acid", "glycolic acid"),
-    (r"lactic acid", "lactic acid"),
-    (r"ceramide", "ceramides"),
-    (r"peptide", "peptides"),
-    (r"octinoxate|avobenzone|zinc oxide|titanium dioxide|spf\b|sunscreen", "spf"),
-]
-
-_TARGET_AREA_TOKENS: list[tuple[str, str]] = [
-    ("eye", "eye"),
-    ("eyes", "eye"),
-    ("contour", "eye"),
-    ("lip", "lip"),
-    ("lips", "lip"),
-    ("body", "body"),
-    ("face", "face"),
-    ("facial", "face"),
-]
-
-_OZ_TO_ML = 29.5735
-_PACK_RE = re.compile(r"(\d+(?:\.\d+)?)\s*(ml|g|oz|fl\.?\s*oz)", re.IGNORECASE)
-_WORD_BOUNDARY_CACHE: dict[str, re.Pattern[str]] = {}
+_COLOUR_FAMILY: dict[str, str] = {
+    # greyscale dark
+    "black": "black",
+    "charcoal": "black",
+    "grey": "black",
+    "grey melange": "black",
+    "steel": "black",
+    "metallic": "black",
+    "silver": "black",
+    # light neutrals
+    "white": "white",
+    "off white": "white",
+    "cream": "white",
+    "nude": "white",
+    "skin": "white",
+    "beige": "white",
+    "peach": "white",
+    # blue family (navy/blue/teal cluster as one family)
+    "blue": "blue",
+    "navy blue": "blue",
+    "navy": "blue",
+    "teal": "blue",
+    "turquoise blue": "blue",
+    "sea green": "blue",
+    # green family
+    "green": "green",
+    "fluorescent green": "green",
+    "lime green": "green",
+    "olive": "green",
+    "khaki": "green",
+    # yellow family
+    "yellow": "yellow",
+    "mustard": "yellow",
+    "gold": "yellow",
+    # brown family
+    "brown": "brown",
+    "coffee brown": "brown",
+    "mushroom brown": "brown",
+    "tan": "brown",
+    "taupe": "brown",
+    "copper": "brown",
+    "bronze": "brown",
+    "rust": "brown",
+    # red family
+    "red": "red",
+    "maroon": "red",
+    "burgundy": "red",
+    "orange": "red",
+    # pink family
+    "pink": "pink",
+    "magenta": "pink",
+    "rose": "pink",
+    "mauve": "pink",
+    # purple family
+    "purple": "purple",
+    "lavender": "purple",
+    # multi
+    "multi": "multi",
+}
 
 
-def _word_pattern(token: str) -> re.Pattern[str]:
-    pat = _WORD_BOUNDARY_CACHE.get(token)
-    if pat is None:
-        pat = re.compile(r"\b" + re.escape(token.lower()) + r"\b", re.IGNORECASE)
-        _WORD_BOUNDARY_CACHE[token] = pat
-    return pat
+def colour_family(base_colour: str) -> str:
+    """Map a raw baseColour string onto its colour family (lowercased)."""
+    if not base_colour:
+        return "other"
+    return _COLOUR_FAMILY.get(base_colour.strip().lower(), "other")
 
 
-# ---------------------------------------------------------------------------
-# Pure attribute extractors (unit-testable).
-# ---------------------------------------------------------------------------
+def colour_similarity(a: str, b: str) -> float:
+    """Similarity in {0.0, 0.6, 1.0} based on the colour-family map.
 
-
-def extract_format(product_name: str) -> str:
-    """Token-match the product format from the product name."""
-    if not product_name:
-        return "unknown"
-    low = product_name.lower()
-    for token, label in _FORMAT_TOKENS:
-        if _word_pattern(token).search(low):
-            return label
-    return "unknown"
-
-
-def extract_skin_type_claims(product_name: str, labels: str) -> str:
-    """Token-match skin-type claims from product name + labels."""
-    haystack = f"{product_name} {labels}".lower()
-    found: list[str] = []
-    for token, label in _SKIN_TYPE_TOKENS:
-        if label in found:
-            continue
-        if _word_pattern(token).search(haystack):
-            found.append(label)
-    return ",".join(found)
-
-
-def extract_key_actives(
-    ingredients_text: str, ingredients_tags: list[str]
-) -> list[str]:
-    """Match the curated INCI vocabulary against ingredients text + tags.
-
-    ingredients_tags from Open Beauty Facts arrive normalized as
-    ``en:hyaluronic-acid``; we strip the ``en:`` prefix and turn dashes
-    into spaces so the same patterns match both sources.
+    1.0 same exact colour, 0.6 same family, 0.0 different family.
+    Either side "other"/null -> 0.5 (neutral, no signal).
     """
-    text = (ingredients_text or "").lower()
-    tags_norm = " ".join(
-        t.split(":", 1)[-1].replace("-", " ").lower() for t in (ingredients_tags or [])
-    )
-    haystack = f"{text} {tags_norm}"
-    found: list[str] = []
-    for pattern, label in _ACTIVE_RULES:
-        if label in found:
-            continue
-        if re.search(pattern, haystack):
-            found.append(label)
-    return found
+    fa = colour_family(a)
+    fb = colour_family(b)
+    if fa == "other" or fb == "other":
+        return 0.5
+    if a.strip().lower() == b.strip().lower():
+        return 1.0
+    if fa == fb:
+        return 0.6
+    return 0.0
 
 
-def extract_pack_size_ml(quantity: str) -> float | None:
-    """Parse a numeric pack size from the quantity string, in ml.
+# ---------------------------------------------------------------------------
+# Pattern and material vocabularies (regex on productDisplayName).
+# ---------------------------------------------------------------------------
 
-    oz is converted to ml (1 oz ~ 29.5735 ml). g is treated as 1:1 ml
-    (cream density ~1.0); this is a documented simplification.
-    """
-    if not quantity:
-        return None
-    m = _PACK_RE.search(quantity)
-    if not m:
-        return None
-    value = float(m.group(1))
-    unit = m.group(2).lower().replace("fl.", "").replace("fl", "").strip()
-    if unit == "oz":
-        return round(value * _OZ_TO_ML, 2)
-    # ml and g map 1:1 to ml-equivalent.
-    return round(value, 2)
+_PATTERN_RULES: list[tuple[str, str]] = [
+    (r"\bsolid\b", "Solid"),
+    (r"\bstrip(?:e|ed|es)\b|\bstripes\b", "Striped"),
+    (r"\bprint(?:ed)?\b|\bprints\b", "Printed"),
+    (r"\bcheck(?:ed|s)?\b|\bchecks\b|\bgingham\b|\bplaid\b", "Checked"),
+    (r"\bfloral\b|\bflowers?\b", "Floral"),
+    (r"\bgraphic\b|\bgraphics\b", "Graphic"),
+    (r"\bpolka\b", "Polka"),
+    (r"\btie[- ]?dye\b", "Tie-dye"),
+    (r"\bcolor[- ]?block\b|\bcolour[- ]?block\b", "Colorblock"),
+]
+
+_MATERIAL_RULES: list[tuple[str, str]] = [
+    (r"\bcotton\b", "Cotton"),
+    (r"\bdenim\b", "Denim"),
+    (r"\blinen\b|\blinen\b", "Linen"),
+    (r"\bsilk\b", "Silk"),
+    (r"\bpolyester\b", "Polyester"),
+    (r"\bleather\b", "Leather"),
+    (r"\bwool\b|\bwoollen\b|\bwoolen\b", "Wool"),
+    (r"\bcashmere\b", "Cashmere"),
+    (r"\bnylon\b", "Nylon"),
+    (r"\bspandex\b", "Spandex"),
+    (r"\bviscose\b", "Viscose"),
+    (r"\brayon\b", "Rayon"),
+    (r"\bcanvas\b", "Canvas"),
+    (r"\bsuede\b", "Suede"),
+    (r"\bknit\b|\bknitted\b", "Knit"),
+    (r"\bflannel\b", "Flannel"),
+    (r"\bchiffon\b", "Chiffon"),
+    (r"\bgeorgette\b", "Georgette"),
+    (r"\bcrepe\b", "Crepe"),
+    (r"\bsatin\b", "Satin"),
+    (r"\bjersey\b", "Jersey"),
+    (r"\bfleece\b", "Fleece"),
+    (r"\bmesh\b", "Mesh"),
+    (r"\blycra\b", "Lycra"),
+    (r"\bneoprene\b", "Neoprene"),
+    (r"\bacrylic\b", "Acrylic"),
+    (r"\bjute\b", "Jute"),
+]
 
 
-def extract_target_area(product_name: str) -> str:
-    """Token-match the target area from the product name."""
+def extract_pattern(product_name: str) -> str | None:
+    """Regex-extract a pattern label from the product name, if present."""
     if not product_name:
-        return "unknown"
+        return None
     low = product_name.lower()
-    for token, label in _TARGET_AREA_TOKENS:
-        if _word_pattern(token).search(low):
+    for pattern, label in _PATTERN_RULES:
+        if re.search(pattern, low):
             return label
-    return "unknown"
+    return None
+
+
+def extract_material(product_name: str) -> str | None:
+    """Regex-extract a material label from the product name, if present."""
+    if not product_name:
+        return None
+    low = product_name.lower()
+    for pattern, label in _MATERIAL_RULES:
+        if re.search(pattern, low):
+            return label
+    return None
 
 
 # ---------------------------------------------------------------------------
 # Orchestrator.
 # ---------------------------------------------------------------------------
 
+_LLM_NAME_LONG_THRESHOLD = 20
+
+
+def _llm_keys_present() -> bool:
+    """True if any LLM provider key is set in the environment."""
+    import os
+
+    return bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("GOOGLE_API_KEY"))
+
 
 def _row_to_record(row: dict[str, object]) -> OntologyRecord:
-    code = str(row.get("code") or "")
+    code = str(row.get("id") or "")
     brand = str(row.get("brand_normalized") or "")
-    product_name = str(row.get("product_name") or "")
+    product_name = str(row.get("productDisplayName") or "")
+    article_type_raw = str(row.get("articleType") or "")
+    master_category = str(row.get("masterCategory") or "")
+    base_colour_raw = str(row.get("baseColour") or "")
+    usage = str(row.get("usage") or "")
+    gender = str(row.get("gender") or "")
+    season_val = row.get("season")
+    season = str(season_val) if season_val else None
 
-    ingredients_text = extract_text(row.get("ingredients_text"))
-    ingredients_tags_raw = row.get("ingredients_tags")
-    if isinstance(ingredients_tags_raw, list):
-        ingredients_tags = [str(t) for t in ingredients_tags_raw]
+    article_type = align_article_type(article_type_raw)
+    base_colour = colour_family(base_colour_raw)
+    pattern = extract_pattern(product_name)
+    material = extract_material(product_name)
+
+    needs_llm = (
+        pattern is None
+        and material is None
+        and len(product_name) > _LLM_NAME_LONG_THRESHOLD
+    )
+
+    # LLM hook: filled out in the multi-provider wrapper (commit #13).
+    # When a key is present and a row needs the LLM, the wrapper would be
+    # invoked here to fill pattern/material, aligning to already-observed
+    # values (Vastra buildPrompt reuse pattern). For now, pure rules.
+    source: Source = "rules"
+    if needs_llm:
+        # Ambiguous row that the rules left with no pattern/material and no
+        # LLM is available (or the hook isn't wired yet) -> flag low confidence.
+        confidence = 0.6
+    elif pattern is not None or material is not None:
+        confidence = 0.7
     else:
-        ingredients_tags = []
-    labels = str(row.get("labels") or "")
-    quantity = str(row.get("quantity") or "")
-
-    fmt = extract_format(product_name)
-    skin = extract_skin_type_claims(product_name, labels)
-    actives = extract_key_actives(ingredients_text, ingredients_tags)
-    pack = extract_pack_size_ml(quantity)
-    area = extract_target_area(product_name)
-
-    needs_llm = (fmt == "unknown") or (not actives and bool(ingredients_text))
-    confidence = 0.6 if needs_llm else 1.0
+        confidence = 1.0
 
     return OntologyRecord(
         code=code,
         brand_normalized=brand,
         product_name=product_name,
-        format=cast(Format, fmt),
-        skin_type_claims=[s for s in skin.split(",") if s],
-        key_actives=actives,
-        pack_size_ml=pack,
-        target_area=cast(TargetArea, area),
-        source="rules",
+        article_type=article_type,
+        master_category=master_category,
+        base_colour=base_colour,
+        usage=usage,
+        gender=gender,
+        season=season,
+        pattern=pattern,
+        material=material,
+        source=source,
         confidence=confidence,
     )
 
@@ -235,11 +273,17 @@ def build_ontology(
     rows = df.to_dicts()
 
     records: list[OntologyRecord] = []
-    ambiguous = 0
+    regex_pattern_rows = 0
+    regex_material_rows = 0
+    ambiguous_rows = 0
     for row in rows:
         rec = _row_to_record(row)
-        if rec.source == "rules" and rec.confidence < 1.0:
-            ambiguous += 1
+        if rec.pattern is not None:
+            regex_pattern_rows += 1
+        if rec.material is not None:
+            regex_material_rows += 1
+        if rec.confidence == 0.6:
+            ambiguous_rows += 1
         records.append(rec)
 
     records.sort(key=lambda r: r.code)
@@ -260,11 +304,13 @@ def build_ontology(
         input_rows=input_rows,
         output_rows=len(records),
         filters={
-            "ambiguous_low_confidence_rows": ambiguous,
-            "llm_enabled": False,
+            "rows_with_pattern": regex_pattern_rows,
+            "rows_with_material": regex_material_rows,
+            "ambiguous_low_confidence_rows": ambiguous_rows,
+            "llm_enabled": _llm_keys_present(),
         },
-        notes="Pure-rules extraction. LLM enrichment is env-gated and off "
-        "by default; ambiguous rows (unknown format or empty actives) "
-        "are flagged with confidence=0.6.",
+        notes="Pure-rules extraction. LLM enrichment is env-gated and off by "
+        "default; ambiguous rows (long name but no pattern/material) are "
+        "flagged with confidence=0.6.",
     )
     return records, entry
