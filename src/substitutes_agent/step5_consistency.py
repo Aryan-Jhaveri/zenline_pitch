@@ -144,6 +144,7 @@ def run_consistency(
             filters={"borderline_pairs": len(pairs), "models": []},
             notes="Skipped: no provider keys.",
         )
+        _write_outputs(report, output_json, output_md)
         return report, entry
 
     print(
@@ -174,6 +175,7 @@ def run_consistency(
             },
             notes="Dry run; no calls made.",
         )
+        _write_outputs(report, output_json, output_md)
         return report, entry
 
     transcripts_fh = None
@@ -245,6 +247,17 @@ def run_consistency(
         "placeholder until a real run's numbers are reviewed.",
     )
 
+    _write_outputs(report, output_json, output_md)
+
+    return report, entry
+
+
+def _write_outputs(
+    report: dict[str, Any],
+    output_json: str | Path | None,
+    output_md: str | Path | None,
+) -> None:
+    """Write the JSON + Markdown artifacts for a (possibly skipped) run."""
     if output_json is not None:
         jp = Path(output_json)
         jp.parent.mkdir(parents=True, exist_ok=True)
@@ -255,8 +268,6 @@ def run_consistency(
         mp = Path(output_md)
         mp.parent.mkdir(parents=True, exist_ok=True)
         mp.write_text(_render_markdown(report), encoding="utf-8")
-
-    return report, entry
 
 
 def _render_markdown(report: dict[str, Any]) -> str:
