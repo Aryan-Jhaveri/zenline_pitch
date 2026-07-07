@@ -17,11 +17,12 @@ Zenline's Q2 2026 update argues that raw autonomous agents give inconsistent ans
 
 ## Interpretation
 
-Not sure what to make of the within-model Consistency but here we see that gemini agrees with itself on every pair, Claude on 29 of 30, but the real gap is cross-model agreement (80%).Roughly one in five borderline calls flips when the vendor changes, even though each model largely agrees with itself.
+Not sure what to make of the within-model consistency but here we see that Gemini agrees with itself on every pair, Claude on 29 of 30. The interesting number is cross-model agreement at 80%.
 
-For a retailer, it couldn't be "ask the same LLM twice, get two answers" (less of a problem at the small tier than the rhetoric suggests), but instead the real issue is "swap vendors and watch the substitute map shift on 20% of borderline SKUs." 
+For a retailer, that reframes the failure mode. It couldn't be "ask the same LLM twice, get two answers" (less of a problem at the small tier than the rhetoric suggests). The real issue is "swap vendors and watch the substitute map shift" on some fraction of borderline SKUs. How large that fraction is depends on deployment posture.
 
+Under one query per pair with no retry, 20% of borderline pairs have at least one disagreeing verdict somewhere across the 9 total runs. Under majority vote across three runs per model, which is what a rational production system would do, only 1 pair in 30 (3.3%) actually flips when you change vendor. That single pair is 8200|8393, where GPT-4o-mini says yes on all three runs while Gemini and Claude both say no on all three. Every other cross-model disagreement is within-model noise on a single model, most often GPT-4o-mini.
 
-The rules pipeline keeps LLMs off the deterministic majority of decisions, so a vendor change becomes a versioned diff instead of silent drift. GPT-4o-mini's 86.67% self-agreement is a secondary datum: even without vendor-swapping, picking the wrong small model gives flapping decisions on roughly one in seven borderline calls.
+Both numbers matter. 20% is the upper bound under naive deployment. 3.3% is the honest floor under sensible retry. Either way, the rules pipeline catches the deterministic majority of decisions before they reach an LLM, so drift only ever applies to the borderline residual. A vendor change becomes a versioned diff on a small auditable subset, not a silent shift across the whole substitute map.
 
-Looking at run-level detail, only one of the six cross-model disagreements is a clean vendor split (pair 8200|8393, where GPT-4o-mini says yes on all three runs while both Gemini and Claude say no on all three). The other five are within-model noise on a single model, most often GPT-4o-mini. Under majority voting across three runs per model, the real vendor-swap flip rate on this sample is 1 pair in 30, roughly 3.3 percent. That's the number a retailer's ops team would actually experience if they deployed any of these models with the sensible retry pattern. Small, but nonzero, and it accumulates across catalog versions. See output/step6_audit_trail.md for the full per-pair audit and output/step6_vendor_diff.md for the vendor comparison.
+Per-pair audit trail: output/step6_audit_trail.md. Vendor-swap diff: output/step6_vendor_diff.md.
