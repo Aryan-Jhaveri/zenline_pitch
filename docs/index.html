@@ -238,6 +238,31 @@
   and gender, but the SUBSTITUTE rule correctly refuses to bridge Formal
   and Casual. That is the rule doing its job, not a gap to fix.
 </p>
+
+<h3>Stranded gap SKUs</h3>
+<p>
+  Not every gap SKU has near-misses. 25 of the 129 gap SKUs are the only
+  item in their blocking group (master category + article type + gender),
+  so no candidate pair forms at all. The pipeline cannot propose a
+  substitute because there is nothing to compare against.
+</p>
+<table>
+  <thead>
+    <tr><th>SKU</th><th>Product</th><th>Brand</th><th>Article type</th><th>Gender</th></tr>
+  </thead>
+  <tbody>
+    <tr><td class="num">30720</td><td>Fabindia Boys Printed Blue Kurta</td><td>fabindia</td><td>dress</td><td>Boys</td></tr>
+    <tr><td class="num">31112</td><td>Gini and Jony Boys Yellow 3/4 Length Pants</td><td>gini and jony</td><td>Capris</td><td>Boys</td></tr>
+    <tr><td class="num">52495</td><td>Red Rose Women Light Pink Bath Robe</td><td>red</td><td>Bath Robe</td><td>Women</td></tr>
+    <tr><td class="num">57079</td><td>Elle Women Blue Jumpsuit</td><td>elle</td><td>Jumpsuit</td><td>Women</td></tr>
+    <tr><td class="num">15046</td><td>ADIDAS Kids Boys Solid Red Sweatshirts</td><td>adidas kids</td><td>hoodie</td><td>Boys</td></tr>
+  </tbody>
+</table>
+<p>
+  Kids' categories, ethnic wear, and rare article types dominate this
+  list. These are items a buyer would flag for assortment expansion, not
+  for a different matching algorithm.
+</p>
 </section>
 
 <!-- 7. Step 5 -->
