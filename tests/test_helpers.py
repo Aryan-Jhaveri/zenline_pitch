@@ -49,6 +49,12 @@ def test_provider_for_dispatch() -> None:
     assert llm.provider_for("gemini-2.5-flash") == "google"
 
 
+def test_provider_for_openrouter_dispatch() -> None:
+    # Any model id containing "/" routes through OpenRouter.
+    assert llm.provider_for("anthropic/claude-haiku-4.5") == "openrouter"
+    assert llm.provider_for("openai/gpt-4o-mini") == "openrouter"
+
+
 def test_provider_for_unknown_raises() -> None:
     try:
         llm.provider_for("gpt-4")
@@ -60,6 +66,7 @@ def test_provider_for_unknown_raises() -> None:
 def test_pick_default_model_none_without_keys(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     assert llm.pick_default_model() is None
     assert llm.any_key_present() is False
 
@@ -69,6 +76,34 @@ def test_any_key_present_true_with_fake_key(
 ) -> None:
     monkeypatch.setenv("ANTHROPIC_API_KEY", "fake")
     assert llm.any_key_present() is True
+
+
+def test_any_key_present_true_with_only_openrouter(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    monkeypatch.setenv("OPENROUTER_API_KEY", "fake")
+    assert llm.any_key_present() is True
+
+
+def test_is_available_openrouter_true_with_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The openai SDK is installed via the [llm] extra, so is_available
+    # should be True when only OPENROUTER_API_KEY is present.
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    monkeypatch.setenv("OPENROUTER_API_KEY", "fake")
+    assert llm.is_available("anthropic/claude-haiku-4.5") is True
+    assert llm.is_available("openai/gpt-4o-mini") is True
+
+
+def test_is_available_openrouter_false_without_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    assert llm.is_available("anthropic/claude-haiku-4.5") is False
 
 
 def test_extract_prompt_includes_observed_values() -> None:
