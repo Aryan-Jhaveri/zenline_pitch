@@ -66,6 +66,23 @@
   "red". "Gini and Jony" survives by accident. This flows directly into
   the pair classifier. Documented, not hidden.
 </p>
+
+<h3>What got filtered out</h3>
+<p>
+  13,824 rows left the dataset before Step 2. The biggest cut is
+  category leakage: 11,289 Accessories, 2,404 Personal Care, 105 Free
+  Items, 25 Sporting Goods, 1 Home. A deodorant, a football, a cushion
+  cover, a free tie. None of them belong in an apparel substitute map.
+  The rest are rows with missing brand-derivable names, article types,
+  or colours, plus 22 malformed rows the loader reconstructed from
+  ragged CSV lines.
+</p>
+<pre><code>[Personal Care]  Colorbar Soft Touch Show Stopper Copper Lipstick 037
+[Personal Care]  David Beckham Signature Men Deos
+[Sporting Goods] Puma Unisex Liga XL Football
+[Home]           Swayam Unisex Yellow and Orange Cushion Covers (Set of 2)
+[Free Items]     Park Avenue Blue Patterned Tie
+[Accessories]    Titan Women Silver Watch</code></pre>
 <p class="artifact">Committed output: <code>output/step1_normalized.parquet</code></p>
 </section>
 
@@ -185,19 +202,19 @@
 <h3>Top near-miss SKUs</h3>
 <table>
   <thead>
-    <tr><th>SKU</th><th class="num">Near-misses</th><th class="num">Best score</th></tr>
+    <tr><th>SKU</th><th>Near-misses</th><th class="num">Best score</th><th>Closest candidate</th><th>Blocked from SUBSTITUTE by</th></tr>
   </thead>
   <tbody>
-    <tr><td>13088</td><td class="num">81</td><td class="num">0.725</td></tr>
-    <tr><td>2058</td><td class="num">81</td><td class="num">0.675</td></tr>
-    <tr><td>28856</td><td class="num">81</td><td class="num">0.675</td></tr>
-    <tr><td>31088</td><td class="num">52</td><td class="num">0.775</td></tr>
-    <tr><td>53152</td><td class="num">52</td><td class="num">0.725</td></tr>
-    <tr><td>57495</td><td class="num">36</td><td class="num">0.725</td></tr>
-    <tr><td>57498</td><td class="num">36</td><td class="num">0.725</td></tr>
-    <tr><td>7777</td><td class="num">36</td><td class="num">0.675</td></tr>
-    <tr><td>19645</td><td class="num">29</td><td class="num">0.675</td></tr>
-    <tr><td>30948</td><td class="num">29</td><td class="num">0.725</td></tr>
+    <tr><td class="num">13088</td><td class="num">81</td><td class="num">0.725</td><td>10662, Doodle Boy Travel Red Tshirts</td><td>usage mismatch: Sports vs Casual</td></tr>
+    <tr><td class="num">2058</td><td class="num">81</td><td class="num">0.675</td><td>6582, Inkfruit Men's The Last War Navy T-shirt</td><td>colour gate: pink vs blue (similarity 0.0)</td></tr>
+    <tr><td class="num">28856</td><td class="num">81</td><td class="num">0.675</td><td>17920, Nike Mens Traning Blue T-shirt</td><td>colour gate: yellow vs blue (similarity 0.0)</td></tr>
+    <tr><td class="num">31088</td><td class="num">52</td><td class="num">0.775</td><td>37142, Wills Lifestyle Men Lavender Gingham Shirt</td><td>usage mismatch: Formal vs Casual</td></tr>
+    <tr><td class="num">53152</td><td class="num">52</td><td class="num">0.725</td><td>29835, Basics Men Brown Checked Slim Fit Shirt</td><td>usage mismatch: Formal vs Casual</td></tr>
+    <tr><td class="num">57495</td><td class="num">36</td><td class="num">0.725</td><td>22841, Woodland Men Brown Shoes</td><td>usage mismatch: Formal vs Casual</td></tr>
+    <tr><td class="num">57498</td><td class="num">36</td><td class="num">0.725</td><td>19352, Numero Uno Men Lifestyle Black Casual Shoes</td><td>usage mismatch: Formal vs Casual</td></tr>
+    <tr><td class="num">7777</td><td class="num">36</td><td class="num">0.675</td><td>13065, Numero Uno Men Black Casual Shoes</td><td>colour gate: red vs black (similarity 0.0)</td></tr>
+    <tr><td class="num">19645</td><td class="num">29</td><td class="num">0.675</td><td>11029, Jealous 21 Women Check Purple Tops</td><td>colour gate: brown vs purple (similarity 0.0)</td></tr>
+    <tr><td class="num">30948</td><td class="num">29</td><td class="num">0.725</td><td>34579, Tonga Women Orange Printed Top</td><td>usage mismatch: Ethnic vs Casual</td></tr>
   </tbody>
 </table>
 
@@ -212,12 +229,15 @@
 
 <h3>Reading the near-miss table</h3>
 <p>
-  These are SKUs whose closest candidate still classified UNRELATED.
-  Their best scores land between 0.675 and 0.775, high enough that a
-  richer colour map or material regex could flip them into substitutes.
-  The blocking already put them next to the right neighbours. The
-  conjunctive rules, usually the colour-family gate, are what held them
-  out.
+  The blocking reason is not what I expected before I ran the numbers.
+  I assumed the colour-family gate would dominate, and it does for four
+  of the ten (pink vs blue, yellow vs blue, red vs black, brown vs
+  purple). But six of ten are blocked by a usage mismatch: a Formal
+  shirt sitting next to a Casual shirt in the same blocking group, or an
+  Ethnic top next to a Casual one. The blocking rule puts them next to
+  each other because they share article type and gender, but the
+  conjunctive SUBSTITUTE rule correctly refuses to bridge Formal and
+  Casual. That is the rule doing its job, not a gap to fix.
 </p>
 </section>
 
