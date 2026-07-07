@@ -1,0 +1,126 @@
+{
+  "total_skus": 500,
+  "substitution_gap_count": 129,
+  "substitution_gap_pct": 25.8,
+  "substitute_edges": 947,
+  "variant_edges": 109,
+  "top_brands_by_sku": [
+    {
+      "brand": "adidas",
+      "sku_count": 39,
+      "gap_skus": 11,
+      "gap_pct": 28.21
+    },
+    {
+      "brand": "nike",
+      "sku_count": 34,
+      "gap_skus": 13,
+      "gap_pct": 38.24
+    },
+    {
+      "brand": "united colors of",
+      "sku_count": 17,
+      "gap_skus": 4,
+      "gap_pct": 23.53
+    },
+    {
+      "brand": "catwalk",
+      "sku_count": 15,
+      "gap_skus": 5,
+      "gap_pct": 33.33
+    },
+    {
+      "brand": "puma",
+      "sku_count": 15,
+      "gap_skus": 0,
+      "gap_pct": 0.0
+    },
+    {
+      "brand": "red",
+      "sku_count": 14,
+      "gap_skus": 4,
+      "gap_pct": 28.57
+    },
+    {
+      "brand": "wrangler",
+      "sku_count": 11,
+      "gap_skus": 0,
+      "gap_pct": 0.0
+    },
+    {
+      "brand": "gini and jony",
+      "sku_count": 10,
+      "gap_skus": 5,
+      "gap_pct": 50.0
+    },
+    {
+      "brand": "fabindia",
+      "sku_count": 9,
+      "gap_skus": 7,
+      "gap_pct": 77.78
+    },
+    {
+      "brand": "locomotive",
+      "sku_count": 9,
+      "gap_skus": 0,
+      "gap_pct": 0.0
+    }
+  ],
+  "top_gap_skus_by_near_misses": [
+    {
+      "sku": "13088",
+      "near_misses": 81,
+      "best_score": 0.725
+    },
+    {
+      "sku": "2058",
+      "near_misses": 81,
+      "best_score": 0.675
+    },
+    {
+      "sku": "28856",
+      "near_misses": 81,
+      "best_score": 0.675
+    },
+    {
+      "sku": "31088",
+      "near_misses": 52,
+      "best_score": 0.775
+    },
+    {
+      "sku": "53152",
+      "near_misses": 52,
+      "best_score": 0.725
+    },
+    {
+      "sku": "57495",
+      "near_misses": 36,
+      "best_score": 0.725
+    },
+    {
+      "sku": "57498",
+      "near_misses": 36,
+      "best_score": 0.725
+    },
+    {
+      "sku": "7777",
+      "near_misses": 36,
+      "best_score": 0.675
+    },
+    {
+      "sku": "19645",
+      "near_misses": 29,
+      "best_score": 0.675
+    },
+    {
+      "sku": "30948",
+      "near_misses": 29,
+      "best_score": 0.725
+    }
+  ],
+  "wall_clock_s": {
+    "step1_ingest": 0.123,
+    "step2_ontology": 0.0144,
+    "step3_classify": 0.0382
+  }
+}

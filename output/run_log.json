@@ -1,0 +1,67 @@
+[
+  {
+    "step": "step1_ingest",
+    "started_at": "2026-07-07T08:54:37+00:00",
+    "duration_s": 0.123,
+    "input_rows": 500,
+    "output_rows": 500,
+    "filters": {
+      "rows_before_required_drop": 500,
+      "rows_after_required_drop": 500,
+      "rows_before_dedupe": 500,
+      "rows_after_dedupe": 500,
+      "rows_before_category_filter": 500,
+      "rows_after_category_filter": 500,
+      "category_counts": {
+        "Apparel": 359,
+        "Footwear": 141
+      },
+      "brand_derivation": "leading tokens of productDisplayName until a boundary token (gender/usage/colour/article noun), capped at 3"
+    },
+    "notes": "Brand has no dedicated column in this dataset; derived heuristically from productDisplayName. Imperfect by design."
+  },
+  {
+    "step": "step2_ontology",
+    "started_at": "2026-07-07T08:54:37+00:00",
+    "duration_s": 0.0144,
+    "input_rows": 500,
+    "output_rows": 500,
+    "filters": {
+      "rows_with_pattern": 125,
+      "rows_with_material": 12,
+      "ambiguous_low_confidence_rows": 362,
+      "llm_enriched_rows": 0,
+      "llm_enabled": false
+    },
+    "notes": "Pure-rules extraction. LLM enrichment is env-gated and off by default; ambiguous rows (long name but no pattern/material) are flagged with confidence=0.6."
+  },
+  {
+    "step": "step3_classify",
+    "started_at": "2026-07-07T08:54:37+00:00",
+    "duration_s": 0.0382,
+    "input_rows": 500,
+    "output_rows": 1056,
+    "filters": {
+      "candidate_pairs": 7429,
+      "variant_edges": 109,
+      "substitute_edges": 947,
+      "skipped_no_article_type": 0,
+      "tiebreak_invocations": 0,
+      "llm_enabled": false
+    },
+    "notes": "Blocking on (master_category, article_type, gender). LLM tie-breaker fires only for total_score in [0.45, 0.55] when a provider key is present; rules verdict stands otherwise."
+  },
+  {
+    "step": "step4_report",
+    "started_at": "2026-07-07T08:54:37+00:00",
+    "duration_s": 0.0238,
+    "input_rows": 500,
+    "output_rows": 1056,
+    "filters": {
+      "gap_count": 129,
+      "gap_pct": 25.8,
+      "near_miss_skus": 104
+    },
+    "notes": "Numbers are actual results from this run."
+  }
+]
