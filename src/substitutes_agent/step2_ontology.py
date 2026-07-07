@@ -128,11 +128,13 @@ def colour_similarity(a: str, b: str) -> float:
 # ---------------------------------------------------------------------------
 
 _PATTERN_RULES: list[tuple[str, str]] = [
+    # Specific patterns before the generic "Printed" rule so that
+    # "Flower Print Top" classifies as Floral, not Printed.
     (r"\bsolid\b", "Solid"),
     (r"\bstrip(?:e|ed|es)\b|\bstripes\b", "Striped"),
-    (r"\bprint(?:ed)?\b|\bprints\b", "Printed"),
     (r"\bcheck(?:ed|s)?\b|\bchecks\b|\bgingham\b|\bplaid\b", "Checked"),
     (r"\bfloral\b|\bflowers?\b", "Floral"),
+    (r"\bprint(?:ed)?\b|\bprints\b", "Printed"),
     (r"\bgraphic\b|\bgraphics\b", "Graphic"),
     (r"\bpolka\b", "Polka"),
     (r"\btie[- ]?dye\b", "Tie-dye"),
@@ -160,7 +162,8 @@ _MATERIAL_RULES: list[tuple[str, str]] = [
     (r"\bgeorgette\b", "Georgette"),
     (r"\bcrepe\b", "Crepe"),
     (r"\bsatin\b", "Satin"),
-    (r"\bjersey\b", "Jersey"),
+    # "Jersey" omitted: in this dataset it almost always denotes the
+    # garment (cricket jersey), not the knit fabric -> avoid false positives.
     (r"\bfleece\b", "Fleece"),
     (r"\bmesh\b", "Mesh"),
     (r"\blycra\b", "Lycra"),
