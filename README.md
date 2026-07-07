@@ -2,13 +2,7 @@
 
 ## What this is
 
-An independent take on a problem described in Zenline's Q2 2025 outlook: mapping substitute products in a retailer's assortment — implemented as an **agentic workflow** on open apparel data.
-
-It runs end-to-end on a 500-row slice of the paramaggarwal fashion-product-images dataset (Kaggle,
-MIT) and produces a substitution gap report. 
-
-The taxonomy and prompt shape are adapted from prior work on [Vastra](https://vastra.cc), an AI
-wardrobe app.
+A small implementation of retail substitute mapping, built as an **agentic workflow** on open apparel data. Runs end-to-end on a 500-row slice of the paramaggarwal fashion-product-images dataset (Kaggle, MIT) and produces a substitution gap report plus a small experiment measuring LLM consistency on borderline pairs. The taxonomy and prompt shape are adapted from my own prior work on [Vastra](https://vastra.cc), an AI wardrobe app. Zenline AI's public writing on agentic assortment intelligence is the reference frame, and their case studies on face creams and dairy are the pattern being mirrored one category over.
 
 ## Why an agentic workflow (not an autonomous agent)
 
@@ -23,6 +17,8 @@ This demo highlights that position: Steps 1, 2 (rules path), and 4 are pure code
 ever fires in Step 2 (filling ambiguous attributes) and Step 3
 (tie-breaking borderline pairs), and only when an API key is set. Same
 input always produces the same output.
+
+This design is the pre-SOTA baseline for a substitute-mapping pipeline. The 2026 literature on cost-efficient entity matching (Ma et al., *CE-RAG4EM*) converges on the same shape: classical blocking first, then rules, then an LLM only as a verifier on the residual. Amazon's *CatalogRAG* (Zhang et al., 2025) makes the same argument specifically for attribute completion: seed the LLM prompt with well-filled examples from the same catalog, don't rely on the model's internal knowledge. Both patterns are already in this pipeline (Step 3's blocking rule, Step 2's "reuse observed values" prompt). I built them from first principles before finding the papers, which was reassuring. Where this pipeline consciously departs from current SOTA is discussed in "Where this fits" below.
 
 I read Zenline's public positioning as arguing for a **product ontology** — a
 stable, retailer-specific vocabulary of attributes that AI reasoning is
@@ -122,7 +118,72 @@ interpretation paragraph in that file is intentionally left as a
 placeholder — the point is to report what the numbers say after seeing
 them, not to write a conclusion in advance.
 
+## Where this fits
+
+Four papers directly relevant to what this pipeline does or chooses not to do.
+
+- **Ma et al., *Cost-Efficient RAG for Entity Matching with LLMs*
+  ([arXiv:2602.05708](https://arxiv.org/abs/2602.05708), Feb 2026).**
+  Classical blocking heuristics from the Magellan era plus modern LLMs is
+  the economically viable pattern at scale. Step 3 of this pipeline does
+  the same blocking-based grouping, minus the external knowledge-graph
+  lookup. On 9 standard entity-matching benchmarks, their approach beats
+  supervised PLMs on 6 of 9.
+
+- **Zhang, Khan, Walter (Amazon), *CatalogRAG* (LLM4ECommerce Workshop
+  at KDD'25, Aug 2025).**
+  Multi-stage BM25 retrieval plus brand and popularity reranking plus
+  few-shot examples fed into attribute-specific LLM prompts to fill
+  missing product attributes. Deployed across Amazon US, DE, FR stores.
+  Step 2's LLM path in this pipeline is a scrappier version of the same
+  intuition, passing already-observed values instead of retrieved similar
+  entries. Notably, CatalogRAG explicitly chose BM25 over vector
+  embeddings for operational simplicity, which is a direct precedent for
+  the no-embeddings choice here.
+
+- **Tang et al., *Large Reasoning Embedding Models*
+  ([arXiv:2510.14321](https://arxiv.org/abs/2510.14321), Oct 2025).**
+  Deployed on Taobao and Tmall since August 2025. On difficult queries
+  whose lexical form is far from target items, direct-embedding retrievers
+  fail. Their fix is to have the LLM generate a compact keyword chain of
+  thought first, then embed the combined representation. This is the
+  direction this pipeline consciously does not take. Our retrieval is
+  deterministic blocking on structured attributes, not semantic search
+  over free-form queries.
+
+- **Kothari et al. (Flipkart), semantic retrieval for e-commerce product
+  search ([arXiv:2606.01504](https://arxiv.org/abs/2606.01504), May 2026).**
+  Production Siamese Qwen3-Embedding-4B dual-encoder trained in two
+  stages: contrastive plus Relative Odds Alignment for Retrieval (ROAR).
+  Their graded relevance hierarchy is Perfect Match > Substitute >
+  Complementary > Irrelevant, which maps onto this pipeline's VARIANT /
+  SUBSTITUTE / UNRELATED with a fourth class this pipeline does not
+  handle. What you build when you have labeled substitute data. This
+  demo does not, and the rules pipeline is the pre-training baseline you
+  would start from.
+
 ## Honest limitations
+
+- **No ground truth in this demo, though public benchmarks exist.** There
+  are no labeled "these are actual substitutes" annotations on the
+  paramaggarwal Kaggle dataset. Zenline's published metric ("corrected
+  over 50% missing links and 35% wrong pairs") implies ground truth from
+  client catalogs, either behavioral or manually curated. Two public
+  alternatives could be dropped in for evaluation: the Amazon Shopping
+  Queries Dataset (Reddy et al., 2022) with ESCI labels (Exact,
+  Substitute, Complement, Irrelevant), and the Magellan and WDC
+  entity-matching benchmarks used in Ma et al. (2026). I did not use
+  them for this demo because the paramaggarwal dataset is closer to the
+  raw-retailer-catalog state Zenline describes working with in their
+  case studies. Adopting one of those benchmarks would be the obvious
+  first extension to close the evaluation loop.
+
+- **English-only, on a single dataset.** The paramaggarwal dataset is
+  primarily English with some transliterated terms. Zhang et al. (2025)
+  demonstrate that in-catalog few-shot approaches yield the largest
+  gains on non-English stores, where LLM base performance is weaker.
+  Extending this pipeline to a multilingual retailer would likely make
+  the Step 2 LLM path more valuable, not less.
 
 - The paramaggarwal dataset is sourced from myntra.com and is
   volunteer/catalog-contributed; it is sparse in places and India-skewed.
@@ -161,5 +222,5 @@ them, not to write a conclusion in advance.
 
 ## Why I built this
 
-Because it is also a good test for Phase2 for Vastra and where I'd take my own project. This validated Zenlines findings, but also our own internal prototype testing when we Did vastra - model changes meant inconsistent tagging. Our project also has a pipeline'd flow where agents are called in for verification and tagging but do not make autonomous decisions due to inconsistencies
+Because it is also a good test for Phase 2 of Vastra and where I'd take my own project next. Building this validated something we'd hit in Vastra's internal prototype testing: model changes meant inconsistent tagging on the same garment. Vastra's own architecture already has a pipelined flow where agents are called in for verification and tagging but do not make autonomous decisions, precisely because of these inconsistencies. Zenline's public argument for agentic workflows lands on the same conclusion from the retailer side of the aisle, which is why the demo was worth building.
 
