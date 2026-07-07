@@ -1,0 +1,13 @@
+{
+  "total_pairs": 30,
+  "all_vendors_agree_count": 29,
+  "vendor_split_count": 1,
+  "vendor_split_pairs": [
+    "8200|8393"
+  ],
+  "per_vendor_yes_count": {
+    "anthropic/claude-haiku-4.5": 2,
+    "gemini-2.5-flash": 2,
+    "openai/gpt-4o-mini": 3
+  }
+}
