@@ -10,8 +10,10 @@ __pycache__/
 .coverage
 htmlcov/
 
-# Data: never commit the full dataset, only the sample slice
+# Data: never commit the full datasets, only the committed sample slice
 data/beauty.parquet
+data/styles.csv
+data/*.zip
 
 # Output artifacts are committed deliberately; keep llm cache private
 output/.llm_cache/
