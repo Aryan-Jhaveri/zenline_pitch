@@ -22,6 +22,7 @@ import json
 import time
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from substitutes_agent.models import (
     OntologyRecord,
@@ -129,19 +130,42 @@ def _llm_keys_present() -> bool:
 
 
 def _llm_tiebreak(
-    a: OntologyRecord, b: OntologyRecord, components: ScoreComponents
-) -> tuple[str, str | None]:
-    """LLM tie-breaker for borderline scores. Wired in the LLM wrapper commit.
+    a: OntologyRecord,
+    b: OntologyRecord,
+    components: ScoreComponents,
+    decisions_fh: Any | None = None,
+) -> tuple[str | None, str | None, str | None]:
+    """LLM tie-breaker for borderline scores, wired to the multi-provider wrapper.
 
-    Returns (decided_by, reason). When no key is set, the rules verdict
-    stands (decided_by="rules", reason=None).
+    Returns (decided_by, reason, drop_signal):
+      - ("rules", None, None) when no model is available -> rules verdict stands.
+      - ("llm", reason, "yes"|"no") when the LLM was called. "no" means the
+        pair should be dropped (caller skips emitting it).
+
+    The live network call and logging are marked pragma: no cover.
     """
-    if not _llm_keys_present():
-        return "rules", None
-    # Actual multi-provider call is wired in commit #13 (llm.classify_pair).
-    # For now the rules verdict stands even when a key is present, because
-    # the wrapper isn't imported yet. The hook is here so #13 can fill it.
-    return "rules", None
+    from substitutes_agent.llm import classify_pair, pick_default_model
+
+    model = pick_default_model()
+    if model is None:
+        return "rules", None, None
+    verdict = classify_pair(model, a.model_dump(), b.model_dump())  # pragma: no cover
+    if decisions_fh is not None:  # pragma: no cover
+        decisions_fh.write(
+            json.dumps(
+                {
+                    "sku_a": a.code,
+                    "sku_b": b.code,
+                    "model": model,
+                    "prompt_components": components.model_dump(),
+                    "verdict": verdict.verdict,
+                    "reason": verdict.reason,
+                },
+                ensure_ascii=False,
+            )
+            + "\n"
+        )
+    return "llm", verdict.reason, verdict.verdict
 
 
 def iter_candidate_pairs(
@@ -196,29 +220,41 @@ def classify(
     relationships: list[Relationship] = []
     tiebreak_invocations = 0
 
-    for a, b, components, verdict in candidate_pairs_list:
-        if verdict is None:
-            continue  # UNRELATED pairs are not emitted.
+    decisions_fh = None
+    if decisions_path is not None and _llm_keys_present():
+        dp = Path(decisions_path)
+        dp.parent.mkdir(parents=True, exist_ok=True)
+        decisions_fh = open(dp, "a", encoding="utf-8")  # noqa: SIM115
 
-        decided_by: str = "rules"
-        reason: str | None = None
-        # LLM tie-breaker only on borderline scores.
-        if TIE_BREAK_LOW <= components.total_score <= TIE_BREAK_HIGH:
-            decided_by, reason = _llm_tiebreak(a, b, components)
-            tiebreak_invocations += 1
-            _ = reason
+    try:
+        for a, b, components, verdict in candidate_pairs_list:
+            if verdict is None:
+                continue  # UNRELATED pairs are not emitted.
 
-        relationships.append(
-            Relationship(
-                sku_a=a.code,
-                sku_b=b.code,
-                relationship=verdict,  # type: ignore[arg-type]
-                score=components.total_score,
-                components=components,
-                decided_by=decided_by,  # type: ignore[arg-type]
-                reason=reason,
+            decided_by: str | None = "rules"
+            reason: str | None = None
+            # LLM tie-breaker only on borderline scores.
+            if TIE_BREAK_LOW <= components.total_score <= TIE_BREAK_HIGH:
+                decided_by, reason, drop = _llm_tiebreak(a, b, components, decisions_fh)
+                tiebreak_invocations += 1
+                if drop == "no":
+                    # LLM vetoed the substitute pair -> drop it.
+                    continue
+
+            relationships.append(
+                Relationship(
+                    sku_a=a.code,
+                    sku_b=b.code,
+                    relationship=verdict,  # type: ignore[arg-type]
+                    score=components.total_score,
+                    components=components,
+                    decided_by=decided_by,  # type: ignore[arg-type]
+                    reason=reason,
+                )
             )
-        )
+    finally:
+        if decisions_fh is not None:
+            decisions_fh.close()
 
     relationships.sort(key=lambda r: (r.sku_a, r.sku_b))
 

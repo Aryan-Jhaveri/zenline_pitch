@@ -26,6 +26,11 @@ from pathlib import Path
 
 import polars as pl
 
+from substitutes_agent.llm import (
+    any_key_present,
+    extract_attributes,
+    pick_default_model,
+)
 from substitutes_agent.models import OntologyRecord, RunLogEntry, Source
 from substitutes_agent.vastra_taxonomy import align_article_type
 
@@ -202,13 +207,6 @@ def extract_material(product_name: str) -> str | None:
 _LLM_NAME_LONG_THRESHOLD = 20
 
 
-def _llm_keys_present() -> bool:
-    """True if any LLM provider key is set in the environment."""
-    import os
-
-    return bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("GOOGLE_API_KEY"))
-
-
 def _row_to_record(row: dict[str, object]) -> OntologyRecord:
     code = str(row.get("id") or "")
     brand = str(row.get("brand_normalized") or "")
@@ -266,6 +264,7 @@ def _row_to_record(row: dict[str, object]) -> OntologyRecord:
 def build_ontology(
     input_path: str | Path,
     output_path: str | Path | None = None,
+    cache_dir: str | Path | None = None,
 ) -> tuple[list[OntologyRecord], RunLogEntry]:
     """Run Step 2: read Step 1 parquet, emit ontology records + log entry."""
     started = time.monotonic()
@@ -291,6 +290,39 @@ def build_ontology(
 
     records.sort(key=lambda r: r.code)
 
+    # Optional LLM enrichment (env-gated). For rows the rules left with no
+    # pattern AND no material despite a long name, ask the LLM once per SKU,
+    # passing already-observed values so it aligns to a stable vocabulary
+    # (the Vastra buildPrompt reuse pattern). Cached per-code so re-runs are
+    # deterministic. Live network path -> pragma: no cover.
+    llm_used = 0
+    if any_key_present() and cache_dir is not None:
+        model = pick_default_model()  # pragma: no cover
+        if model is not None:  # pragma: no cover
+            cache_path = Path(cache_dir)
+            cache_path.mkdir(parents=True, exist_ok=True)
+            observed_patterns = sorted({r.pattern for r in records if r.pattern})
+            observed_materials = sorted({r.material for r in records if r.material})
+            for r in records:
+                if (
+                    r.pattern is None
+                    and r.material is None
+                    and len(r.product_name) > _LLM_NAME_LONG_THRESHOLD
+                ):
+                    extra = extract_attributes(
+                        model,
+                        r.product_name,
+                        observed_patterns,
+                        observed_materials,
+                        cache_path / f"{r.code}.json",
+                    )
+                    if extra["pattern"] or extra["material"]:
+                        r.pattern = extra["pattern"]
+                        r.material = extra["material"]
+                        r.source = "llm"
+                        r.confidence = 0.5
+                        llm_used += 1
+
     if output_path is not None:
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
@@ -310,7 +342,8 @@ def build_ontology(
             "rows_with_pattern": regex_pattern_rows,
             "rows_with_material": regex_material_rows,
             "ambiguous_low_confidence_rows": ambiguous_rows,
-            "llm_enabled": _llm_keys_present(),
+            "llm_enriched_rows": llm_used,
+            "llm_enabled": any_key_present(),
         },
         notes="Pure-rules extraction. LLM enrichment is env-gated and off by "
         "default; ambiguous rows (long name but no pattern/material) are "
