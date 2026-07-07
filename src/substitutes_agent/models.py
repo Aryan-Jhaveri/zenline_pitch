@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -66,5 +66,5 @@ class RunLogEntry(BaseModel):
     duration_s: float
     input_rows: int | None = None
     output_rows: int | None = None
-    filters: dict[str, int] = Field(default_factory=dict)
+    filters: dict[str, Any] = Field(default_factory=dict)
     notes: str | None = None
