@@ -163,3 +163,49 @@ def test_run_consistency_writes_skipped_markdown(
     md = mout.read_text()
     assert "# Consistency Experiment" in md
     assert "Skipped" in md
+
+
+def test_run_consistency_full_mocked(
+    tmp_path,
+    monkeypatch,  # type: ignore[no-untyped-def]
+) -> None:
+    """Exercise the post-loop report building with a mocked network layer.
+
+    The live LLM loop is pragma: no cover, but the report/stats/markdown
+    paths after it are not; this test covers them with synthetic verdicts.
+    """
+    import substitutes_agent.step5_consistency as s5
+    from substitutes_agent.models import PairVerdict
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "fake")
+    monkeypatch.setenv("GOOGLE_API_KEY", "fake")
+
+    # A borderline pair: same blocking group, different colour + usage ->
+    # total_score ~0.50, inside [0.40, 0.60].
+    records = [
+        _rec("1", brand="x", colour="blue", usage="Casual"),
+        _rec("2", brand="y", colour="red", usage="Sports"),
+    ]
+    ont = _write_ontology(tmp_path, records)
+
+    def fake_classify(
+        model: str, a: dict, b: dict, ctx: dict | None = None
+    ) -> PairVerdict:
+        return PairVerdict(verdict="yes", reason="mocked", model=model)
+
+    monkeypatch.setattr(s5, "classify_pair", fake_classify)
+
+    jout = tmp_path / "s5.json"
+    mout = tmp_path / "s5.md"
+    tout = tmp_path / "t.jsonl"
+    rep, log = run_consistency(ont, jout, mout, tout)
+    assert not rep["skipped"]
+    assert rep["borderline_pairs"] >= 1
+    # All mocked verdicts are "yes" -> 100% agreement everywhere.
+    assert rep["stats"]["cross_model_agreement_pct"] == 100.0
+    assert jout.exists()
+    assert mout.exists()
+    assert tout.exists()
+    md = mout.read_text()
+    assert "Within-model consistency" in md
+    assert "Cross-model agreement" in md
