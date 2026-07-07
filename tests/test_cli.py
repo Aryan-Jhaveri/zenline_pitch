@@ -15,6 +15,7 @@ def test_cli_run_sample(
 ) -> None:
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     out = tmp_path / "out"
     result = runner.invoke(app, ["run", "--sample", "--output", str(out)])
     assert result.exit_code == 0, result.output
@@ -27,6 +28,7 @@ def test_cli_consistency_skips_without_keys(
 ) -> None:
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     out = tmp_path / "out"
     runner.invoke(app, ["run", "--sample", "--output", str(out)])
     result = runner.invoke(app, ["consistency", "--output", str(out)])

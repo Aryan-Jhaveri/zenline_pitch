@@ -1,4 +1,4 @@
-"""Multi-provider LLM wrapper (Anthropic + Google Gemini), env-gated.
+"""Multi-provider LLM wrapper (Anthropic, Google Gemini, and OpenRouter), env-gated.
 
 Uniform interface for the two judgment points in the pipeline:
   - Step 2: extract_attributes (fill pattern/material for ambiguous rows)
@@ -26,14 +26,16 @@ from pathlib import Path
 from substitutes_agent.models import PairVerdict
 
 DEFAULT_MODELS = (
-    "claude-haiku-4-5-20251001",
-    "claude-sonnet-4-6",
     "gemini-2.5-flash",
+    "anthropic/claude-haiku-4.5",
+    "openai/gpt-4o-mini",
 )
 
 
 def provider_for(model: str) -> str:
     """Return the provider name for a model id."""
+    if "/" in model:
+        return "openrouter"
     if model.startswith("claude"):
         return "anthropic"
     if model.startswith("gemini"):
@@ -46,6 +48,8 @@ def _key_for(provider: str) -> str | None:
         return os.environ.get("ANTHROPIC_API_KEY")
     if provider == "google":
         return os.environ.get("GOOGLE_API_KEY")
+    if provider == "openrouter":
+        return os.environ.get("OPENROUTER_API_KEY")
     return None
 
 
@@ -57,6 +61,10 @@ def _sdk_available(provider: str) -> bool:
             return True
         if provider == "google":
             import google.genai  # noqa: F401
+
+            return True
+        if provider == "openrouter":
+            import openai  # noqa: F401
 
             return True
     except ImportError:
@@ -83,7 +91,11 @@ def pick_default_model() -> str | None:
 
 def any_key_present() -> bool:
     """True if any provider key is set (SDK may or may not be installed)."""
-    return bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("GOOGLE_API_KEY"))
+    return bool(
+        os.environ.get("ANTHROPIC_API_KEY")
+        or os.environ.get("GOOGLE_API_KEY")
+        or os.environ.get("OPENROUTER_API_KEY")
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -153,6 +165,23 @@ def _call_google(model: str, prompt: str) -> str:  # pragma: no cover
     return resp.text or ""
 
 
+def _call_openrouter(model: str, prompt: str) -> str:  # pragma: no cover
+    from openai import OpenAI
+
+    client = OpenAI(
+        api_key=os.environ["OPENROUTER_API_KEY"],
+        base_url="https://openrouter.ai/api/v1",
+    )
+    resp = client.chat.completions.create(
+        model=model,
+        max_tokens=256,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    if not resp.choices:
+        return ""
+    return resp.choices[0].message.content or ""
+
+
 def _call(model: str, prompt: str) -> str:
     provider = provider_for(model)
     if not _sdk_available(provider):
@@ -165,6 +194,8 @@ def _call(model: str, prompt: str) -> str:
         return _call_anthropic(model, prompt)
     if provider == "google":  # pragma: no cover
         return _call_google(model, prompt)
+    if provider == "openrouter":  # pragma: no cover
+        return _call_openrouter(model, prompt)
     raise RuntimeError(f"unhandled provider {provider}")  # pragma: no cover
 
 

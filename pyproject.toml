@@ -22,6 +22,7 @@ dev = [
 llm = [
     "anthropic>=0.30",
     "google-genai>=0.3",
+    "openai>=1.0",
 ]
 
 [project.scripts]

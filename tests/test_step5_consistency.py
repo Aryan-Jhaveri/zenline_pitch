@@ -126,6 +126,7 @@ def test_run_consistency_skips_without_keys(
 ) -> None:
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     ont = _write_ontology(tmp_path, [_rec("1"), _rec("2")])
     rep, log = run_consistency(ont)
     assert rep["skipped"] is True
@@ -137,7 +138,7 @@ def test_run_consistency_dry_run_with_fake_keys(
     tmp_path,
     monkeypatch,  # type: ignore[no-untyped-def]
 ) -> None:
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "fake-key")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "fake-key")
     # Build enough SKUs to form at least one candidate pair.
     records = [_rec(str(i)) for i in range(40)]
     ont = _write_ontology(tmp_path, records)
@@ -154,6 +155,7 @@ def test_run_consistency_writes_skipped_markdown(
 ) -> None:
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     ont = _write_ontology(tmp_path, [_rec("1"), _rec("2")])
     jout = tmp_path / "s5.json"
     mout = tmp_path / "s5.md"
@@ -177,8 +179,8 @@ def test_run_consistency_full_mocked(
     import substitutes_agent.step5_consistency as s5
     from substitutes_agent.models import PairVerdict
 
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "fake")
     monkeypatch.setenv("GOOGLE_API_KEY", "fake")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "fake")
 
     # A borderline pair: same blocking group, different colour + usage ->
     # total_score ~0.50, inside [0.40, 0.60].

@@ -34,6 +34,7 @@ def _step4_without_wall_clock(p: Path) -> dict[str, object]:
 def test_pipeline_e2e_deterministic(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
 
     out1 = tmp_path / "run1"
     out2 = tmp_path / "run2"
@@ -55,6 +56,7 @@ def test_pipeline_e2e_deterministic(tmp_path, monkeypatch) -> None:  # type: ign
 def test_pipeline_e2e_produces_all_artifacts(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     out = tmp_path / "out"
     entries = pipeline.run_pipeline(sample=True, output_dir=out)
     assert len(entries) == 4
@@ -75,6 +77,7 @@ def test_pipeline_e2e_run_log_has_four_steps(
 ) -> None:
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     out = tmp_path / "out"
     pipeline.run_pipeline(sample=True, output_dir=out)
     log = json.loads((out / "run_log.json").read_text())
@@ -93,6 +96,7 @@ def test_pipeline_e2e_no_llm_cache_without_keys(
 ) -> None:
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     out = tmp_path / "out"
     pipeline.run_pipeline(sample=True, output_dir=out)
     cache = out / ".llm_cache"
