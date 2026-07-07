@@ -17,4 +17,4 @@ Zenline's Q2 2026 update argues that raw autonomous agents give inconsistent ans
 
 ## Interpretation
 
-<fill in after seeing the numbers>
+The interesting finding here isn't within-model consistency — Gemini agrees with itself on every pair, Claude on 29 of 30 — it's the gap to cross-model agreement (80%). Roughly one in five borderline calls flips when the vendor changes, even though each model largely agrees with itself. For a retailer, that's the sharper failure mode: not "ask the same LLM twice, get two answers" (less of a problem at the small tier than the rhetoric suggests), but "swap vendors and watch the substitute map shift on 20% of borderline SKUs." The rules-first pipeline keeps LLMs off the deterministic majority of decisions and logs every residual judgment per model, so a vendor change becomes a versioned diff instead of silent drift. GPT-4o-mini's 86.67% self-agreement — four pairs where its three runs didn't all agree — is a secondary datum: even without vendor-swapping, picking the wrong small model gives a retailer flapping decisions on roughly one in seven borderline calls.
