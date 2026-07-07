@@ -2,12 +2,12 @@
 
 ## What this is
 
-An independent take on a problem Zenline AI describes publicly — mapping
-substitute products in a retailer's assortment — implemented as an
-**agentic workflow** on open apparel data. It runs end-to-end on a
-500-row slice of the paramaggarwal fashion-product-images dataset (Kaggle,
-MIT) and produces a substitution gap report. The taxonomy and prompt shape
-are adapted from my own prior work on [Vastra](https://vastra.cc), an AI
+An independent take on a problem described in Zenline's Q2 2025 outlook: mapping substitute products in a retailer's assortment — implemented as an **agentic workflow** on open apparel data.
+
+It runs end-to-end on a 500-row slice of the paramaggarwal fashion-product-images dataset (Kaggle,
+MIT) and produces a substitution gap report. 
+
+The taxonomy and prompt shape are adapted from prior work on [Vastra](https://vastra.cc), an AI
 wardrobe app.
 
 ## Why an agentic workflow (not an autonomous agent)
@@ -16,17 +16,18 @@ Zenline has argued publicly that fully autonomous
 agents are inconsistent for high-stakes retail decisions; the value is in
 **agentic workflows** — a fixed, visible, verifiable pipeline where an LLM
 does judgment work only at one or two clearly defined points and every
-other step is deterministic and auditable. This demo takes that position
-literally: Steps 1, 2 (rules path), and 4 are pure code, and the LLM only
+other step is deterministic and auditable.  (Which is strongly strongly agree)
+
+
+This demo highlights that position: Steps 1, 2 (rules path), and 4 are pure code, and the LLM only
 ever fires in Step 2 (filling ambiguous attributes) and Step 3
-(tie-breaking borderline pairs) — and only when an API key is set. Same
+(tie-breaking borderline pairs), and only when an API key is set. Same
 input always produces the same output.
 
 I read Zenline's public positioning as arguing for a **product ontology** — a
 stable, retailer-specific vocabulary of attributes that AI reasoning is
-anchored to. I don't know Zenline's internal term for this; it's my read.
-Step 2's structured attribute layer (article type, colour family, usage,
-pattern, material) is that idea in code.
+anchored to. Step 2's structured attribute layer (article type, colour family, usage,
+pattern, material) is that idea.
 
 ## How this reuses my prior work
 
@@ -34,14 +35,16 @@ pattern, material) is that idea in code.
 photo-based garment categorization. Its categorizer is anchored to a
 small, stable vocabulary of article types, and its prompt passes the set
 of subcategories already present in the wardrobe so the model reuses
-existing spellings before inventing new ones. I lifted both ideas here:
+existing spellings before inventing new ones.
+
+I lifted both ideas here:
 the 8-category / ~50-subcategory taxonomy lives in
 `src/substitutes_agent/vastra_taxonomy.py`, and the Step 2 LLM prompt
 passes already-observed pattern/material values so the model aligns to a
 stable vocabulary rather than emitting free-form labels. Same intuition,
 retail-catalog scope.
 
-## The four steps
+## The four steps (% ai_generated)
 
 ```
   styles.csv
@@ -102,8 +105,7 @@ Apparel + Footwear SKUs, no LLM):
 - VARIANT edges proposed: **109**
 - Wall-clock: ~0.2s total across all four steps
 
-These are actual results on the sample fixture, not styled to match any
-published metric.
+Actual results
 
 ## Testing the consistency claim
 
@@ -134,17 +136,15 @@ them, not to write a conclusion in advance.
   ~72% of sample rows have neither pattern nor material extracted and are
   flagged low-confidence — exactly the gap the optional LLM path is meant
   to lift.
-- This is a portfolio demo, not a benchmark. I make no claim of parity
-  with Zenline's internal system, and I don't claim to know their
-  algorithms or accuracy.
+- This work does NOT MAKE ANY CLAIMS ON BEHALF OF ZENLINE IF YOURE READING THIS HERE. 
 
 ## References
 
-- Arber Sejdiji Q&A, The Retail Bulletin (Apr 2026):
-  https://www.theretailbulletin.com/retail-solutions/qa-arber-sejdiji-co-founder-ceo-zenline-ai-16-04-2026/
-- Zenline AI insights: https://www.tryzenline.ai/insights
-- Startuprad.io on Zenline's agentic assortment approach:
-  https://www.startuprad.io/post/zenline-ai-agentic-assortment-decisions-win-retail-margins-startuprad-io
+- https://www.theretailbulletin.com/retail-solutions/qa-arber-sejdiji-co-founder-ceo-zenline-ai-16-04-2026/
+- https://www.tryzenline.ai/insights
+- https://www.startuprad.io/post/zenline-ai-agentic-assortment-decisions-win-retail-margins-startuprad-io
+
+
 - Dataset: paramaggarwal fashion-product-images-dataset (Kaggle, MIT),
   sourced from myntra.com:
   https://www.kaggle.com/datasets/paramaggarwal/fashion-product-images-dataset
@@ -161,4 +161,5 @@ them, not to write a conclusion in advance.
 
 ## Why I built this
 
-`<Aryan will fill this in>`
+Because it is also a good test for Phase2 for Vastra and where I'd take my own project. This validated Zenlines findings, but also our own internal prototype testing when we Did vastra - model changes meant inconsistent tagging. Our project also has a pipeline'd flow where agents are called in for verification and tagging but do not make autonomous decisions due to inconsistencies
+

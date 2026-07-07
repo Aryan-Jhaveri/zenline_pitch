@@ -26,3 +26,6 @@ output/.llm_cache/
 .vscode/
 .idea/
 .DS_Store
+./claude
+
+./CLAUDE.md
