@@ -144,6 +144,38 @@ def _llm_tiebreak(
     return "rules", None
 
 
+def iter_candidate_pairs(
+    records: list[OntologyRecord],
+) -> list[tuple[OntologyRecord, OntologyRecord, ScoreComponents, str | None]]:
+    """Yield every blocked candidate pair with its components and verdict.
+
+    Blocking key is (master_category, article_type, gender); pairs with an
+    empty article_type on either side are skipped. verdict is
+    "VARIANT"/"SUBSTITUTE" or None (UNRELATED). Exposed so Step 4 can
+    compute near-misses from the same scoring path without re-implementing
+    blocking.
+    """
+    groups: dict[tuple[str, str, str], list[OntologyRecord]] = {}
+    for r in records:
+        if not r.article_type:
+            continue
+        key = (r.master_category, r.article_type, r.gender)
+        groups.setdefault(key, []).append(r)
+
+    pairs: list[tuple[OntologyRecord, OntologyRecord, ScoreComponents, str | None]] = []
+    for key in sorted(groups):
+        group = sorted(groups[key], key=lambda r: r.code)
+        for i in range(len(group)):
+            for j in range(i + 1, len(group)):
+                a, b = group[i], group[j]
+                if a.code > b.code:
+                    a, b = b, a
+                comp = score_pair(a, b)
+                verdict = classify_pair(a, b, comp)
+                pairs.append((a, b, comp, verdict))
+    return pairs
+
+
 def classify(
     input_path: str | Path,
     output_path: str | Path | None = None,
@@ -157,57 +189,36 @@ def classify(
     records = [OntologyRecord(**d) for d in data]
     input_rows = len(records)
 
-    # Index by code and group by (master_category, article_type, gender) for
-    # blocking. Skip records with empty article_type entirely.
-    groups: dict[tuple[str, str, str], list[OntologyRecord]] = {}
-    skipped_no_article = 0
-    for r in records:
-        if not r.article_type:
-            skipped_no_article += 1
-            continue
-        key = (r.master_category, r.article_type, r.gender)
-        groups.setdefault(key, []).append(r)
+    candidate_pairs_list = iter_candidate_pairs(records)
+    candidate_pairs = len(candidate_pairs_list)
+    skipped_no_article = input_rows - sum(1 for r in records if r.article_type)
 
-    candidate_pairs = 0
     relationships: list[Relationship] = []
     tiebreak_invocations = 0
 
-    for key in sorted(groups):
-        group = sorted(groups[key], key=lambda r: r.code)
-        for i in range(len(group)):
-            for j in range(i + 1, len(group)):
-                a, b = group[i], group[j]
-                # Canonical ordering: sku_a < sku_b.
-                if a.code > b.code:
-                    a, b = b, a
-                candidate_pairs += 1
-                components = score_pair(a, b)
-                verdict = classify_pair(a, b, components)
-                if verdict is None:
-                    continue  # UNRELATED pairs are not emitted.
+    for a, b, components, verdict in candidate_pairs_list:
+        if verdict is None:
+            continue  # UNRELATED pairs are not emitted.
 
-                decided_by: str = "rules"
-                reason: str | None = None
-                # LLM tie-breaker only on borderline scores.
-                if TIE_BREAK_LOW <= components.total_score <= TIE_BREAK_HIGH:
-                    decided_by, reason = _llm_tiebreak(a, b, components)
-                    tiebreak_invocations += 1
-                    # When the LLM returns "no", the pair is dropped. The
-                    # wired wrapper (commit #13) will return that signal;
-                    # for now the rules verdict always stands.
-                    _ = reason
+        decided_by: str = "rules"
+        reason: str | None = None
+        # LLM tie-breaker only on borderline scores.
+        if TIE_BREAK_LOW <= components.total_score <= TIE_BREAK_HIGH:
+            decided_by, reason = _llm_tiebreak(a, b, components)
+            tiebreak_invocations += 1
+            _ = reason
 
-                relationships.append(
-                    Relationship(
-                        sku_a=a.code,
-                        sku_b=b.code,
-                        relationship=verdict,  # type: ignore[arg-type]
-                        score=components.total_score,
-                        components=components,
-                        decided_by=decided_by,  # type: ignore[arg-type]
-                        reason=reason,
-                    )
-                )
+        relationships.append(
+            Relationship(
+                sku_a=a.code,
+                sku_b=b.code,
+                relationship=verdict,  # type: ignore[arg-type]
+                score=components.total_score,
+                components=components,
+                decided_by=decided_by,  # type: ignore[arg-type]
+                reason=reason,
+            )
+        )
 
     relationships.sort(key=lambda r: (r.sku_a, r.sku_b))
 
@@ -233,7 +244,6 @@ def classify(
         input_rows=input_rows,
         output_rows=len(relationships),
         filters={
-            "groups": len(groups),
             "candidate_pairs": candidate_pairs,
             "variant_edges": variant_n,
             "substitute_edges": substitute_n,
