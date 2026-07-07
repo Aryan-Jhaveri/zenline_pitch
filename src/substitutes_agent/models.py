@@ -31,7 +31,7 @@ class OntologyRecord(BaseModel):
     brand_normalized: str
     product_name: str
     format: Format
-    skin_type_claims: list[SkinType] = Field(default_factory=list)
+    skin_type_claims: list[str] = Field(default_factory=list)
     key_actives: list[str] = Field(default_factory=list)
     pack_size_ml: float | None = None
     target_area: TargetArea = "unknown"
