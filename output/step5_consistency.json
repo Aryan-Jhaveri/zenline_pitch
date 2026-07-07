@@ -1,0 +1,543 @@
+{
+  "skipped": false,
+  "framing": "Zenline's Q2 2026 update argues that raw autonomous agents give inconsistent answers to the same question. This step tests that claim on this project's own ambiguous pairs.",
+  "borderline_pairs": 30,
+  "models_evaluated": [
+    "gemini-2.5-flash",
+    "anthropic/claude-haiku-4.5",
+    "openai/gpt-4o-mini"
+  ],
+  "estimated_calls": 270,
+  "verdicts": {
+    "11148|17549": {
+      "gemini-2.5-flash": [
+        "no",
+        "no",
+        "no"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "no",
+        "no",
+        "no"
+      ],
+      "openai/gpt-4o-mini": [
+        "no",
+        "no",
+        "no"
+      ]
+    },
+    "12147|32577": {
+      "gemini-2.5-flash": [
+        "no",
+        "no",
+        "no"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "no",
+        "no",
+        "no"
+      ],
+      "openai/gpt-4o-mini": [
+        "no",
+        "no",
+        "no"
+      ]
+    },
+    "12174|16338": {
+      "gemini-2.5-flash": [
+        "no",
+        "no",
+        "no"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "no",
+        "no",
+        "no"
+      ],
+      "openai/gpt-4o-mini": [
+        "no",
+        "no",
+        "no"
+      ]
+    },
+    "12937|26401": {
+      "gemini-2.5-flash": [
+        "yes",
+        "yes",
+        "yes"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "yes",
+        "yes",
+        "yes"
+      ],
+      "openai/gpt-4o-mini": [
+        "yes",
+        "yes",
+        "yes"
+      ]
+    },
+    "12937|27210": {
+      "gemini-2.5-flash": [
+        "no",
+        "no",
+        "no"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "no",
+        "no",
+        "no"
+      ],
+      "openai/gpt-4o-mini": [
+        "no",
+        "no",
+        "no"
+      ]
+    },
+    "13065|57495": {
+      "gemini-2.5-flash": [
+        "no",
+        "no",
+        "no"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "no",
+        "no",
+        "no"
+      ],
+      "openai/gpt-4o-mini": [
+        "no",
+        "no",
+        "no"
+      ]
+    },
+    "14949|7439": {
+      "gemini-2.5-flash": [
+        "yes",
+        "yes",
+        "yes"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "yes",
+        "yes",
+        "yes"
+      ],
+      "openai/gpt-4o-mini": [
+        "yes",
+        "yes",
+        "yes"
+      ]
+    },
+    "16338|18912": {
+      "gemini-2.5-flash": [
+        "no",
+        "no",
+        "no"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "no",
+        "no",
+        "no"
+      ],
+      "openai/gpt-4o-mini": [
+        "no",
+        "no",
+        "no"
+      ]
+    },
+    "16338|57286": {
+      "gemini-2.5-flash": [
+        "no",
+        "no",
+        "no"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "no",
+        "no",
+        "no"
+      ],
+      "openai/gpt-4o-mini": [
+        "no",
+        "no",
+        "no"
+      ]
+    },
+    "16367|51857": {
+      "gemini-2.5-flash": [
+        "no",
+        "no",
+        "no"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "no",
+        "no",
+        "no"
+      ],
+      "openai/gpt-4o-mini": [
+        "no",
+        "no",
+        "no"
+      ]
+    },
+    "16533|29390": {
+      "gemini-2.5-flash": [
+        "no",
+        "no",
+        "no"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "no",
+        "no",
+        "no"
+      ],
+      "openai/gpt-4o-mini": [
+        "no",
+        "no",
+        "no"
+      ]
+    },
+    "16931|28533": {
+      "gemini-2.5-flash": [
+        "no",
+        "no",
+        "no"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "no",
+        "no",
+        "no"
+      ],
+      "openai/gpt-4o-mini": [
+        "no",
+        "no",
+        "yes"
+      ]
+    },
+    "18639|7800": {
+      "gemini-2.5-flash": [
+        "no",
+        "no",
+        "no"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "no",
+        "no",
+        "no"
+      ],
+      "openai/gpt-4o-mini": [
+        "no",
+        "no",
+        "no"
+      ]
+    },
+    "20145|29390": {
+      "gemini-2.5-flash": [
+        "no",
+        "no",
+        "no"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "no",
+        "no",
+        "no"
+      ],
+      "openai/gpt-4o-mini": [
+        "no",
+        "no",
+        "no"
+      ]
+    },
+    "21224|2276": {
+      "gemini-2.5-flash": [
+        "no",
+        "no",
+        "no"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "no",
+        "no",
+        "no"
+      ],
+      "openai/gpt-4o-mini": [
+        "no",
+        "no",
+        "no"
+      ]
+    },
+    "2202|3417": {
+      "gemini-2.5-flash": [
+        "no",
+        "no",
+        "no"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "no",
+        "yes",
+        "no"
+      ],
+      "openai/gpt-4o-mini": [
+        "no",
+        "no",
+        "no"
+      ]
+    },
+    "23153|29024": {
+      "gemini-2.5-flash": [
+        "no",
+        "no",
+        "no"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "no",
+        "no",
+        "no"
+      ],
+      "openai/gpt-4o-mini": [
+        "yes",
+        "no",
+        "no"
+      ]
+    },
+    "2342|29024": {
+      "gemini-2.5-flash": [
+        "no",
+        "no",
+        "no"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "no",
+        "no",
+        "no"
+      ],
+      "openai/gpt-4o-mini": [
+        "no",
+        "no",
+        "no"
+      ]
+    },
+    "24547|40667": {
+      "gemini-2.5-flash": [
+        "no",
+        "no",
+        "no"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "no",
+        "no",
+        "no"
+      ],
+      "openai/gpt-4o-mini": [
+        "no",
+        "no",
+        "no"
+      ]
+    },
+    "24919|30948": {
+      "gemini-2.5-flash": [
+        "no",
+        "no",
+        "no"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "no",
+        "no",
+        "no"
+      ],
+      "openai/gpt-4o-mini": [
+        "no",
+        "no",
+        "no"
+      ]
+    },
+    "26389|41586": {
+      "gemini-2.5-flash": [
+        "no",
+        "no",
+        "no"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "no",
+        "no",
+        "no"
+      ],
+      "openai/gpt-4o-mini": [
+        "no",
+        "no",
+        "no"
+      ]
+    },
+    "29024|4297": {
+      "gemini-2.5-flash": [
+        "no",
+        "no",
+        "no"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "no",
+        "no",
+        "no"
+      ],
+      "openai/gpt-4o-mini": [
+        "no",
+        "yes",
+        "no"
+      ]
+    },
+    "29390|59301": {
+      "gemini-2.5-flash": [
+        "no",
+        "no",
+        "no"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "no",
+        "no",
+        "no"
+      ],
+      "openai/gpt-4o-mini": [
+        "no",
+        "no",
+        "no"
+      ]
+    },
+    "29835|33241": {
+      "gemini-2.5-flash": [
+        "no",
+        "no",
+        "no"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "no",
+        "no",
+        "no"
+      ],
+      "openai/gpt-4o-mini": [
+        "no",
+        "no",
+        "no"
+      ]
+    },
+    "3584|5099": {
+      "gemini-2.5-flash": [
+        "no",
+        "no",
+        "no"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "no",
+        "no",
+        "no"
+      ],
+      "openai/gpt-4o-mini": [
+        "no",
+        "no",
+        "no"
+      ]
+    },
+    "48404|9955": {
+      "gemini-2.5-flash": [
+        "no",
+        "no",
+        "no"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "no",
+        "no",
+        "no"
+      ],
+      "openai/gpt-4o-mini": [
+        "no",
+        "no",
+        "no"
+      ]
+    },
+    "50000|57347": {
+      "gemini-2.5-flash": [
+        "no",
+        "no",
+        "no"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "no",
+        "no",
+        "no"
+      ],
+      "openai/gpt-4o-mini": [
+        "no",
+        "no",
+        "no"
+      ]
+    },
+    "57286|9504": {
+      "gemini-2.5-flash": [
+        "no",
+        "no",
+        "no"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "no",
+        "no",
+        "no"
+      ],
+      "openai/gpt-4o-mini": [
+        "no",
+        "no",
+        "no"
+      ]
+    },
+    "6493|9957": {
+      "gemini-2.5-flash": [
+        "no",
+        "no",
+        "no"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "no",
+        "no",
+        "no"
+      ],
+      "openai/gpt-4o-mini": [
+        "no",
+        "yes",
+        "no"
+      ]
+    },
+    "8200|8393": {
+      "gemini-2.5-flash": [
+        "no",
+        "no",
+        "no"
+      ],
+      "anthropic/claude-haiku-4.5": [
+        "no",
+        "no",
+        "no"
+      ],
+      "openai/gpt-4o-mini": [
+        "yes",
+        "yes",
+        "yes"
+      ]
+    }
+  },
+  "stats": {
+    "pairs": 30,
+    "per_model_self_agreement": {
+      "anthropic/claude-haiku-4.5": {
+        "self_agreement_pct": 96.67,
+        "pairs_evaluated": 30
+      },
+      "gemini-2.5-flash": {
+        "self_agreement_pct": 100.0,
+        "pairs_evaluated": 30
+      },
+      "openai/gpt-4o-mini": {
+        "self_agreement_pct": 86.67,
+        "pairs_evaluated": 30
+      }
+    },
+    "cross_model_agreement_pct": 80.0,
+    "rules_baseline_pct": 100.0
+  },
+  "interpretation": "<fill in after seeing the numbers>"
+}

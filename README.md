@@ -114,11 +114,11 @@ runs each available model 3 times, and reports per-model self-agreement
 and cross-model agreement rates. The rules baseline is 100% by
 construction.
 
-**Step 5 was not run for this commit** — no LLM provider key was set in
-the environment, so the step skipped cleanly. Run it yourself with
-`ANTHROPIC_API_KEY` and/or `GOOGLE_API_KEY` set; the interpretation
-paragraph in `output/step5_consistency.md` is a placeholder to be filled
-in after seeing the numbers, not before.
+Step 5 was run for this commit. See `output/step5_consistency.md` for
+the per-model self-agreement table and cross-model agreement figure. The
+interpretation paragraph in that file is intentionally left as a
+placeholder — the point is to report what the numbers say after seeing
+them, not to write a conclusion in advance.
 
 ## Honest limitations
 
