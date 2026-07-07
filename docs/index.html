@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Substitutes Agent Demo</title>
+<meta name="description" content="A small implementation of retail substitute mapping on open apparel data, built as an agentic workflow with an experiment on where LLM judgment breaks.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+
+<!-- 1. Hero -->
+<section>
+<h1>Substitutes Agent Demo</h1>
+<p>
+  A small implementation of retail substitute mapping on open apparel
+  data. Built as an agentic workflow, with an experiment on where LLM
+  judgment breaks.
+</p>
+<p>
+  <a href="https://github.com/Aryan-Jhaveri/zenline_pitch">Repo on GitHub</a>
+  &middot;
+  <a href="https://vastra.cc">Vastra, my related project</a>
+</p>
+</section>
+
+<!-- 2. The raw data -->
+<section>
+<h2>The raw data</h2>
+<p>
+  The Kaggle apparel dataset ships 44,446 rows. Before any code runs,
+  the data has the usual mess.
+</p>
+<ul>
+  <li><strong>Category leakage.</strong> 2,404 Personal Care rows, 25
+    Sporting Goods, 1 Home. All arrive inside an apparel dataset.</li>
+  <li><strong>No brand column.</strong> Brand is buried inside
+    productDisplayName. "Peter England Men Party Blue Jeans" needs a
+    heuristic to become brand = Peter England.</li>
+  <li><strong>Long tail everywhere.</strong> 316 rows with usage NA. 21
+    rows with empty season. Colors like Skin, Charcoal, Off White with
+    no clean parent family.</li>
+  <li><strong>Category imbalance.</strong> Apparel 21,400. Accessories
+    11,289. Footwear 9,222. Everything else tiny.</li>
+</ul>
+<p>One raw row looks like this:</p>
+<pre><code>15970, Men, Apparel, Topwear, Shirts, Navy Blue, Fall,
+2011, Casual, Turtle Check Men Navy Blue Shirt</code></pre>
+</section>
+
+<!-- 3. Step 1 -->
+<section>
+<h2>Step 1. Filter and normalize</h2>
+<p>Deterministic. No LLM. Pure Python.</p>
+<ul>
+  <li>Filter to Apparel + Footwear. 44,446 becomes 30,622.</li>
+  <li>Drop rows with missing brand-derivable name, article type, or color.</li>
+  <li>Derive brand heuristically from productDisplayName leading tokens.</li>
+  <li>Dedupe by product id.</li>
+  <li>Normalize brand casing.</li>
+</ul>
+<p>
+  The brand heuristic is honest about its failure modes. "United Colors
+  of Benetton" truncates to "united colors of". "Red Tape" collapses to
+  "red". "Gini and Jony" survives by accident. This flows directly into
+  the pair classifier. Documented, not hidden.
+</p>
+<p class="artifact">Committed output: <code>output/step1_normalized.parquet</code></p>
+</section>
+
+<!-- 4. Step 2 -->
+<section>
+<h2>Step 2. Build the product ontology</h2>
+<p>Rules first. LLM only where the rules leave a row ambiguous.</p>
+<p>For each SKU the pipeline extracts:</p>
+<ul>
+  <li>article_type, aligned to a Vastra-adapted taxonomy</li>
+  <li>master_category</li>
+  <li>base_colour, mapped to a family (navy and teal both cluster to blue)</li>
+  <li>usage (Casual, Formal, Sports, Ethnic)</li>
+  <li>gender</li>
+  <li>season</li>
+  <li>pattern (regex: Solid, Striped, Printed, Checked, Floral)</li>
+  <li>material (regex: Cotton, Denim, Linen, Silk, Polyester, Leather)</li>
+</ul>
+<h3>The Vastra tie-in</h3>
+<p>
+  Vastra is my AI wardrobe app. Its categorizer uses a small stable
+  vocabulary and its prompt passes the tags already in the wardrobe so
+  the model reuses spellings instead of inventing new ones. Same pattern
+  here: the LLM path passes patterns and materials already observed in
+  this catalog run, so the model aligns to a stable vocabulary.
+</p>
+<p>
+  The LLM only runs if a row has both pattern and material null despite
+  a long product name. Results are cached to disk so re-runs are free.
+</p>
+<p class="artifact">Committed output: <code>output/step2_ontology.json</code></p>
+</section>
+
+<!-- 5. Step 3 -->
+<section>
+<h2>Step 3. Classify pairs</h2>
+<p>Blocking, scoring, and a narrow LLM tie-break band.</p>
+
+<h3>Blocking rule</h3>
+<p>
+  Two SKUs are only considered a candidate pair if they share
+  master_category, article_type, and gender. This turns 124,750 naive
+  pairs into 7,429 candidates on the 500-row sample. A 94 percent
+  reduction before the scoring layer runs.
+</p>
+
+<h3>Three-way classification</h3>
+<ul>
+  <li><strong>VARIANT.</strong> Same brand, same article, same colour,
+    same usage. Different size or season is fine.</li>
+  <li><strong>SUBSTITUTE.</strong> Different brand, same article, colour
+    family overlap of at least 0.5, same usage, same gender.</li>
+  <li><strong>UNRELATED.</strong> Everything else. Not emitted.</li>
+</ul>
+
+<h3>Scoring formula</h3>
+<pre><code>total_score =
+    0.35 * article_type_match
+  + 0.20 * colour_similarity
+  + 0.15 * usage_match
+  + 0.10 * pattern_match
+  + 0.15 * material_similarity
+  + 0.05 * season_overlap</code></pre>
+
+<h3>LLM tie-break</h3>
+<p>
+  Only fires when total_score sits in [0.45, 0.55] and a provider key is
+  set. On this run the band was empty and the LLM tie-break fired zero
+  times. Rules alone resolved every pair. The LLM shows up elsewhere, in
+  Step 5.
+</p>
+<p class="artifact">Committed output: <code>output/step3_relationships.json</code></p>
+</section>
+
+<!-- 6. Step 4 -->
+<section>
+<h2>Step 4. The gap report</h2>
+
+<div class="metrics">
+  <div class="metric">
+    <div class="number">500</div>
+    <div class="label">SKUs analyzed</div>
+  </div>
+  <div class="metric">
+    <div class="number">947</div>
+    <div class="label">SUBSTITUTE edges</div>
+  </div>
+  <div class="metric">
+    <div class="number">109</div>
+    <div class="label">VARIANT edges</div>
+  </div>
+  <div class="metric">
+    <div class="number">25.8%</div>
+    <div class="label">Substitution gap</div>
+  </div>
+</div>
+
+<h3>Top brands by SKU count</h3>
+<table>
+  <thead>
+    <tr><th>Brand</th><th class="num">SKU count</th><th class="num">Gap SKUs</th><th class="num">Gap %</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>adidas</td><td class="num">39</td><td class="num">11</td><td class="num">28.21</td></tr>
+    <tr><td>nike</td><td class="num">34</td><td class="num">13</td><td class="num">38.24</td></tr>
+    <tr><td>united colors of</td><td class="num">17</td><td class="num">4</td><td class="num">23.53</td></tr>
+    <tr><td>catwalk</td><td class="num">15</td><td class="num">5</td><td class="num">33.33</td></tr>
+    <tr><td>puma</td><td class="num">15</td><td class="num">0</td><td class="num">0.0</td></tr>
+    <tr><td>red</td><td class="num">14</td><td class="num">4</td><td class="num">28.57</td></tr>
+    <tr><td>wrangler</td><td class="num">11</td><td class="num">0</td><td class="num">0.0</td></tr>
+    <tr><td>gini and jony</td><td class="num">10</td><td class="num">5</td><td class="num">50.0</td></tr>
+    <tr><td>fabindia</td><td class="num">9</td><td class="num">7</td><td class="num">77.78</td></tr>
+    <tr><td>locomotive</td><td class="num">9</td><td class="num">0</td><td class="num">0.0</td></tr>
+  </tbody>
+</table>
+
+<h3>Top near-miss SKUs</h3>
+<table>
+  <thead>
+    <tr><th>SKU</th><th class="num">Near-misses</th><th class="num">Best score</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>13088</td><td class="num">81</td><td class="num">0.725</td></tr>
+    <tr><td>2058</td><td class="num">81</td><td class="num">0.675</td></tr>
+    <tr><td>28856</td><td class="num">81</td><td class="num">0.675</td></tr>
+    <tr><td>31088</td><td class="num">52</td><td class="num">0.775</td></tr>
+    <tr><td>53152</td><td class="num">52</td><td class="num">0.725</td></tr>
+    <tr><td>57495</td><td class="num">36</td><td class="num">0.725</td></tr>
+    <tr><td>57498</td><td class="num">36</td><td class="num">0.725</td></tr>
+    <tr><td>7777</td><td class="num">36</td><td class="num">0.675</td></tr>
+    <tr><td>19645</td><td class="num">29</td><td class="num">0.675</td></tr>
+    <tr><td>30948</td><td class="num">29</td><td class="num">0.725</td></tr>
+  </tbody>
+</table>
+
+<h3>Reading the brand table</h3>
+<p>
+  Fabindia at 77.78 percent gap makes sense. Indian ethnic wear is
+  genuinely hard to substitute out of. Nike at 38.24 and Adidas at 28.21
+  are branded sportswear with partial private-label overlap. Puma,
+  Wrangler, and Locomotive at zero percent gap have tight segments where
+  every SKU has at least one substitute.
+</p>
+
+<h3>Reading the near-miss table</h3>
+<p>
+  These are SKUs whose closest candidate still classified UNRELATED.
+  Their best scores land between 0.675 and 0.775, high enough that a
+  richer colour map or material regex could flip them into substitutes.
+  The blocking already put them next to the right neighbours. The
+  conjunctive rules, usually the colour-family gate, are what held them
+  out.
+</p>
+</section>
+
+<!-- 7. Step 5 -->
+<section>
+<h2>Step 5. Consistency experiment</h2>
+<p>Zenline's Q2 2026 update argues that raw autonomous agents give inconsistent answers to the same question. This step tests that claim on this project's own ambiguous pairs.</p>
+
+<h3>Within-model consistency</h3>
+<table>
+  <thead>
+    <tr><th>Model</th><th class="num">Self-agreement %</th><th class="num">Pairs</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>anthropic/claude-haiku-4.5</td><td class="num">96.67</td><td class="num">30</td></tr>
+    <tr><td>gemini-2.5-flash</td><td class="num">100.0</td><td class="num">30</td></tr>
+    <tr><td>openai/gpt-4o-mini</td><td class="num">86.67</td><td class="num">30</td></tr>
+  </tbody>
+</table>
+
+<h3>Cross-model agreement</h3>
+<ul>
+  <li>Pairs where ALL models across ALL runs agreed: <strong>80.0%</strong></li>
+  <li>Rules-based baseline (by construction): <strong>100%</strong></li>
+</ul>
+
+<h3>Interpretation</h3>
+<p>Not sure what to make of the within-model Consistency but here we see that gemini agrees with itself on every pair, Claude on 29 of 30, but the real gap is cross-model agreement (80%).Roughly one in five borderline calls flips when the vendor changes, even though each model largely agrees with itself.</p>
+<p>For a retailer, it couldn't be "ask the same LLM twice, get two answers" (less of a problem at the small tier than the rhetoric suggests), but instead the real issue is "swap vendors and watch the substitute map shift on 20% of borderline SKUs."</p>
+<p>The rules-first pipeline keeps LLMs off the deterministic majority of decisions and logs every residual judgment per model, so a vendor change becomes a versioned diff instead of silent drift. GPT-4o-mini's 86.67% self-agreement &mdash; four pairs where its three runs didn't all agree &mdash; is a secondary datum: even without vendor-swapping, picking the wrong small model gives a retailer flapping decisions on roughly one in seven borderline calls.</p>
+</section>
+
+<!-- 8. Where this fits -->
+<section>
+<h2>Where this fits</h2>
+<p>Four papers directly relevant to what this pipeline does or chooses not to do.</p>
+
+<div class="paper">
+  <p><strong>Ma et al. (Aalborg, Amsterdam, TU Berlin), CE-RAG4EM.</strong>
+    <a href="https://arxiv.org/abs/2602.05708">arXiv:2602.05708</a>. Feb 2026.</p>
+  <p>
+    Classical blocking plus modern LLMs is the economically viable
+    pattern at scale. Step 3 does the same blocking-based grouping,
+    minus the external knowledge-graph lookup. Their approach beats
+    supervised PLMs on 6 of 9 standard entity-matching benchmarks.
+  </p>
+</div>
+
+<div class="paper">
+  <p><strong>Zhang, Khan, Walter (Amazon), CatalogRAG.</strong>
+    LLM4ECommerce Workshop at KDD'25. Aug 2025. Deployed across Amazon
+    US, DE, FR stores.</p>
+  <p>
+    Multi-stage BM25 retrieval and brand-aware reranking to feed LLM
+    prompts with in-catalog few-shot examples. Step 2's LLM path is a
+    scrappier version of the same intuition. They explicitly chose BM25
+    over vector embeddings for operational simplicity, which is the
+    same reason this pipeline uses rules instead of embeddings.
+  </p>
+</div>
+
+<div class="paper">
+  <p><strong>Tang et al. (USTC, Alibaba), Large Reasoning Embedding Models.</strong>
+    <a href="https://arxiv.org/abs/2510.14321">arXiv:2510.14321</a>. Oct
+    2025. Deployed at Taobao since Aug 2025.</p>
+  <p>
+    LLM reasoning is baked into the embedding layer to bridge the
+    semantic gap on difficult natural-language queries. This pipeline
+    does not take that direction. Our retrieval is deterministic
+    blocking on structured attributes, not semantic search over
+    free-form queries.
+  </p>
+</div>
+
+<div class="paper">
+  <p><strong>Kothari et al. (Flipkart), semantic retrieval for product search.</strong>
+    <a href="https://arxiv.org/abs/2606.01504">arXiv:2606.01504</a>. May 2026.</p>
+  <p>
+    Production Siamese dual-encoder with graded-relevance preference
+    optimization. Perfect Match, Substitute, Complementary, Irrelevant.
+    Maps onto this pipeline's VARIANT, SUBSTITUTE, UNRELATED with a
+    fourth class this pipeline does not handle. What you build when
+    you have labeled substitute data. This demo does not.
+  </p>
+</div>
+</section>
+
+<!-- 9. Why I built this -->
+<section>
+<h2>Why I built this</h2>
+<p>Because it is also a good test for Phase 2 of Vastra and where I'd take my own project next. Building this validated something we'd hit in Vastra's internal prototype testing: model changes meant inconsistent tagging on the same garment. Vastra's own architecture already has a pipelined flow where agents are called in for verification and tagging but do not make autonomous decisions, precisely because of these inconsistencies. Zenline's public argument for agentic workflows lands on the same conclusion from the retailer side of the aisle, which is why the demo was worth building.</p>
+</section>
+
+<!-- 10. Honest limitations -->
+<section>
+<h2>Honest limitations</h2>
+<ul>
+  <li><strong>No ground truth in this demo, though public benchmarks exist.</strong> There are no labeled "these are actual substitutes" annotations on the paramaggarwal Kaggle dataset. Zenline's published metric ("corrected over 50% missing links and 35% wrong pairs") implies ground truth from client catalogs, either behavioral or manually curated. Two public alternatives could be dropped in for evaluation: the Amazon Shopping Queries Dataset (Reddy et al., 2022) with ESCI labels (Exact, Substitute, Complement, Irrelevant), and the Magellan and WDC entity-matching benchmarks used in Ma et al. (2026). I did not use them for this demo because the paramaggarwal dataset is closer to the raw-retailer-catalog state Zenline describes working with in their case studies. Adopting one of those benchmarks would be the obvious first extension to close the evaluation loop.</li>
+  <li><strong>English-only, on a single dataset.</strong> The paramaggarwal dataset is primarily English with some transliterated terms. Zhang et al. (2025) demonstrate that in-catalog few-shot approaches yield the largest gains on non-English stores, where LLM base performance is weaker. Extending this pipeline to a multilingual retailer would likely make the Step 2 LLM path more valuable, not less.</li>
+  <li>The paramaggarwal dataset is sourced from myntra.com and is volunteer/catalog-contributed; it is sparse in places and India-skewed.</li>
+  <li>The dataset has no dedicated brand column. I derive brand heuristically from the leading tokens of <code>productDisplayName</code> (consume until a boundary token &mdash; gender / usage / colour / article noun &mdash; capped at 3). It is imperfect by design; mis-derived brands flow directly into the VARIANT/SUBSTITUTE rules.</li>
+  <li>The rules-based ontology is deliberately simple: a small regex vocabulary for pattern and material, and a hand-built colour-family map. ~72% of sample rows have neither pattern nor material extracted and are flagged low-confidence &mdash; exactly the gap the optional LLM path is meant to lift.</li>
+  <li>This work does NOT MAKE ANY CLAIMS ON BEHALF OF ZENLINE IF YOURE READING THIS HERE.</li>
+</ul>
+</section>
+
+<!-- 11. Footer -->
+<footer>
+  <p>
+    <a href="https://github.com/Aryan-Jhaveri/zenline_pitch">Repo</a>
+    &middot;
+    <a href="https://vastra.cc">Vastra</a>
+    &middot;
+    <a href="https://www.kaggle.com/datasets/paramaggarwal/fashion-product-images-dataset">Dataset</a>
+    &middot;
+    <a href="https://www.tryzenline.ai">Zenline AI</a>
+  </p>
+  <p class="small">
+    Dataset: paramaggarwal fashion-product-images-dataset (Kaggle, MIT),
+    sourced from myntra.com.
+  </p>
+</footer>
+
+</main>
+</body>
+</html>
