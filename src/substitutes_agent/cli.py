@@ -6,6 +6,7 @@ Subcommands:
   substitutes-agent run --sample    run on the committed 500-row fixture
   substitutes-agent consistency     run Step 5 (skips cleanly without keys)
   substitutes-agent consistency --dry-run   print the call estimate and abort
+  substitutes-agent audit           generate Step 6 audit trail + vendor diff
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ import typer
 
 from substitutes_agent import pipeline
 from substitutes_agent.step5_consistency import run_consistency
+from substitutes_agent.step6_audit import run_step6
 
 app = typer.Typer(add_completion=False, help=__doc__)
 
@@ -78,6 +80,44 @@ def consistency(
             f"Step 5: cross-model agreement "
             f"{log.filters.get('cross_model_agreement_pct', 0)}%"
         )
+    typer.echo("  done")
+
+
+@app.command()
+def audit(
+    output: str = typer.Option(
+        "output", "--output", help="Output directory with step 5 artifacts."
+    ),
+) -> None:
+    """Generate step 6 audit trail and vendor-swap diff from step 5 artifacts."""
+    out = Path(output)
+    ontology_path = out / "step2_ontology.json"
+    transcripts_path = out / "step5_transcripts.jsonl"
+    consistency_json_path = out / "step5_consistency.json"
+    missing = [
+        p
+        for p in (ontology_path, transcripts_path, consistency_json_path)
+        if not p.exists()
+    ]
+    if missing:
+        joined = ", ".join(str(p) for p in missing)
+        typer.echo(
+            f"error: run `substitutes-agent consistency` first; missing: {joined}.",
+            err=True,
+        )
+        raise typer.Exit(2)
+    log = run_step6(
+        ontology_path=ontology_path,
+        transcripts_path=transcripts_path,
+        consistency_json_path=consistency_json_path,
+        audit_md_out=out / "step6_audit_trail.md",
+        vendor_diff_md_out=out / "step6_vendor_diff.md",
+        vendor_diff_json_out=out / "step6_vendor_diff.json",
+    )
+    typer.echo(
+        f"Step 6: {log.filters.get('vendor_split_count', 0)} vendor-split "
+        f"pair(s) of {log.filters.get('total_pairs', 0)} total pairs."
+    )
     typer.echo("  done")
 
 
