@@ -166,9 +166,7 @@ Four papers directly relevant to what this pipeline does or chooses not to do.
 
 - **No ground truth in this demo, though public benchmarks exist.** There
   are no labeled "these are actual substitutes" annotations on the
-  paramaggarwal Kaggle dataset. Zenline's published metric ("corrected
-  over 50% missing links and 35% wrong pairs") implies ground truth from
-  client catalogs, either behavioral or manually curated. Two public
+  paramaggarwal Kaggle dataset. Two public
   alternatives could be dropped in for evaluation: the Amazon Shopping
   Queries Dataset (Reddy et al., 2022) with ESCI labels (Exact,
   Substitute, Complement, Irrelevant), and the Magellan and WDC
